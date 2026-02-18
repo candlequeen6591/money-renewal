@@ -25,7 +25,6 @@
         .result-desc-box { text-align: left; background: #fffcfd; padding: 25px; border-radius: 30px; border: 3px solid #FFD1DC; line-height: 1.8; white-space: pre-wrap; font-size: 15px; margin-top: 20px; }
         @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-15px); } }
         #quiz-area, #result-area { display: none; }
-        #debug-log { font-size: 10px; color: #ff5252; margin-top: 10px; text-align: left; display: none; }
     </style>
 </head>
 <body>
@@ -38,8 +37,8 @@
         </div>
         <button id="start-btn" class="btn-main" onclick="startGame()" disabled>診断スタート！ 💖</button>
         <p id="loading-msg" style="font-size:11px; color:#bbb; margin-top: 15px;">読込中...</p>
-        <div id="debug-log"></div>
     </div>
+
     <div id="quiz-area">
         <div id="progress-bar" style="width: 100%; height: 8px; background: #eee; border-radius: 10px; margin-bottom: 20px;">
             <div id="progress-fill" style="width: 0%; height: 100%; background: var(--primary-pink); border-radius: 10px; transition: 0.3s;"></div>
@@ -47,6 +46,7 @@
         <div class="question-box" id="question-text"></div>
         <div id="options-container"></div>
     </div>
+
     <div id="result-area">
         <div id="result-content-container" style="background: white; padding: 10px; border-radius: 35px;">
             <h2 style="color: var(--primary-pink); font-size: 14px;">🎀 診断結果 🎀</h2>
@@ -60,7 +60,6 @@
 </div>
 
 <script>
-    // --- 🔗 接続設定を完全にベタ書きにしました ---
     const Q_CSV_URL = "https://docs.google.com/spreadsheets/d/116tuTmwNpfl4FnpSHB8jQ8MNJb8bHGmzgm2mQ8n7fdY/export?format=csv&gid=0";
     const R_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vS9pj-nSE8qg0GTy-VDTdvpDrIJuE6OiJbnE0cOyPtHoV5W98am4V3vKES6H9rlTBfaRxWcUsLuI1VE/pub?gid=1023134718&single=true&output=csv";
     const GAS_URL = "https://script.google.com/macros/s/AKfycbyUi_zfv1Gsk2Yw6VnudCvEIrFP8lcRFE02Jc20Hz3CvOQxD9x4wIcYPTZpDMyBKGOD/exec";
@@ -68,12 +67,6 @@
     let questions = [], resultsMaster = {}, validCodes = new Set(), currentIdx = 0;
     let userCode = "";
     let scores = { A:0, B:0, C:0, D:0, E:0, F:0, G:0, H:0, N:0 };
-
-    function logError(msg) {
-        const div = document.getElementById('debug-log');
-        div.style.display = 'block';
-        div.innerHTML += msg + "<br>";
-    }
 
     function parseCSV(text) {
         const rows = [];
@@ -88,9 +81,7 @@
 
     async function init() {
         try {
-            // 1. 質問CSVのフェッチ
             const qRes = await fetch(Q_CSV_URL);
-            if (!qRes.ok) throw new Error("質問シートの取得に失敗しました");
             const qTxt = await qRes.text();
             parseCSV(qTxt).slice(1).forEach(cols => {
                 if (cols[0]) validCodes.add(cols[0].trim());
@@ -109,9 +100,7 @@
                 }
             });
 
-            // 2. 結果マスタCSVのフェッチ
             const rRes = await fetch(R_CSV_URL);
-            if (!rRes.ok) throw new Error("結果マスタの取得に失敗しました");
             const rTxt = await rRes.text();
             parseCSV(rTxt).slice(1).forEach(cols => {
                 if(cols[0]) {
@@ -124,14 +113,11 @@
             document.getElementById('loading-msg').innerText = "✨ 準備完了！ ✨";
             document.getElementById('start-btn').disabled = false;
         } catch (e) { 
-            console.error(e);
-            document.getElementById('loading-msg').innerText = "❌ 通信エラーが発生しました";
-            logError("エラー内容: " + e.message);
+            document.getElementById('loading-msg').innerText = "❌ 通信エラー：設定を確認してください"; 
         }
     }
 
-    // startGame, showQuestion, showResult などのロジックは以前の正常なものを維持
-    async function startGame() {
+    function startGame() {
         userCode = document.getElementById('group-code').value.trim();
         if (validCodes.has(userCode)) {
             document.getElementById('start-screen').style.display = 'none';
@@ -168,25 +154,68 @@
         let maxType = "A", maxVal = -1;
         for (let t in scores) { if(t !== 'N' && scores[t] > maxVal) { maxVal = scores[t]; maxType = t; } }
 
-        const res = resultsMaster[maxType] || {emoji:"❓", catch:"不明", desc:"マスタが見つかりません"};
+        const res = resultsMaster[maxType] || {emoji:"❓", catch:"不明", desc:"マスタ参照エラー"};
         document.getElementById('result-header').innerHTML = `<span class="animal-emoji">${res.emoji}</span><div class="result-catch">${res.catch}</div>`;
         document.getElementById('result-body').innerText = res.desc;
 
-        // GASへ送信
+        // 今回のスコアを計算
+        const currentData = [
+            scores.A + scores.G + scores.C, 
+            scores.B + scores.F,           
+            scores.E + scores.H,           
+            scores.D * 2                   
+        ];
+
+        // グラフデータセットの準備
+        const datasets = [{
+            label: '今回のあなた',
+            data: currentData,
+            backgroundColor: 'rgba(255, 105, 180, 0.5)',
+            borderColor: '#FF69B4',
+            borderWidth: 4,
+            pointBackgroundColor: '#FF69B4',
+            z: 10
+        }];
+
+        // 【復活機能】LocalStorageから前回のデータを取得（ユーザーコード別）
+        const lastScoreKey = `last_score_${userCode}`;
+        const lastDataRaw = localStorage.getItem(lastScoreKey);
+        if (lastDataRaw) {
+            datasets.push({
+                label: '前回のあなた',
+                data: JSON.parse(lastDataRaw),
+                backgroundColor: 'transparent',
+                borderColor: '#B2EBF2',
+                borderWidth: 3,
+                borderDash: [5, 5],
+                pointBackgroundColor: '#B2EBF2',
+                z: 5
+            });
+        }
+
+        // 今回のスコアを保存
+        localStorage.setItem(lastScoreKey, JSON.stringify(currentData));
+
+        // GAS送信
         const formData = new URLSearchParams();
         formData.append('groupCode', userCode);
         formData.append('type', maxType);
         formData.append('animal', res.catch);
         fetch(GAS_URL, { method: "POST", body: formData, mode: "no-cors" });
 
-        const userData = [scores.A + scores.G + scores.C, scores.B + scores.F, scores.E + scores.H, scores.D * 2];
+        // グラフ描画
         new Chart(document.getElementById('radarChart'), {
             type: 'radar',
             data: { 
                 labels: ['守る力', '使う力', '増やす力', '分ける力'], 
-                datasets: [{ label: 'あなた', data: userData, backgroundColor: 'rgba(255, 105, 180, 0.5)', borderColor: '#FF69B4', borderWidth: 4 }] 
+                datasets: datasets 
             },
-            options: { responsive: true, maintainAspectRatio: false, scales: { r: { beginAtZero: true, suggestedMax: 5 } } }
+            options: { 
+                responsive: true, 
+                maintainAspectRatio: false, 
+                scales: { r: { beginAtZero: true, suggestedMax: 5, ticks: { stepSize: 1 } } },
+                plugins: { legend: { position: 'bottom' } }
+            }
         });
     }
 
@@ -194,7 +223,7 @@
         html2canvas(document.getElementById('result-content-container'), { scale: 2, backgroundColor: "#ffffff" }).then(canvas => {
             const link = document.createElement('a');
             link.download = `診断結果_${userCode}.png`;
-            link.href = canvas.toDataURL(); link.click();
+            link.href = canvas.toURL(); link.click();
         });
     }
     window.onload = init;
