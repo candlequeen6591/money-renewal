@@ -3,18 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>わくわく！マネータイプ診断！</title>
+    <title>✨ わくわく！マネータイプ診断！ ✨</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     
     <style>
-        /* --- かわいいデザイン設定 --- */
+        /* --- デザイン設定 --- */
         body {
             font-family: "Hiragino Kaku Gothic ProN", "メイリオ", sans-serif;
-            background-color: #FFF0F5; /* パステルピンク */
+            background-color: #FFF0F5;
             background-image: radial-gradient(#FFD1DC 2px, transparent 2px);
-            background-size: 30px 30px; /* ドット背景 */
+            background-size: 30px 30px;
             color: #444;
             text-align: center;
             padding: 20px;
@@ -26,139 +26,49 @@
             max-width: 500px;
             margin: 20px auto;
             background: white;
-            border-radius: 40px; /* 角をかなり丸く */
+            border-radius: 40px;
             padding: 35px;
-            box-shadow: 0 10px 0 #FFC0CB; /* 下に厚み */
-            border: 8px solid #B2EBF2; /* ミントグリーンの太枠 */
+            box-shadow: 0 10px 0 #FFC0CB;
+            border: 8px solid #B2EBF2;
             position: relative;
-            transition: all 0.3s ease;
         }
 
-        /* リボン風の装飾（擬似要素） */
-        .container::before {
-            content: "🎀";
-            font-size: 50px;
-            position: absolute;
-            top: -35px;
-            right: -10px;
-            transform: rotate(15deg);
-        }
+        .container::before { content: "🎀"; font-size: 50px; position: absolute; top: -35px; right: -10px; transform: rotate(15deg); }
 
-        h1 {
-            color: #FF69B4;
-            font-size: 24px;
-            margin-bottom: 20px;
-            text-shadow: 2px 2px 0 #fff, 4px 4px 0 #FFE4E1;
-        }
+        h1 { color: #FF69B4; font-size: 24px; text-shadow: 2px 2px 0 #fff; }
 
-        /* 入力エリア */
-        .input-label {
-            display: block;
-            font-weight: bold;
-            color: #0097A7;
-            margin-bottom: 10px;
-        }
-
+        .input-label { display: block; font-weight: bold; color: #0097A7; margin-bottom: 10px; }
         .code-input {
-            padding: 15px;
-            font-size: 24px;
-            width: 160px;
-            border-radius: 20px;
-            border: 3px dashed #B2EBF2;
-            text-align: center;
-            letter-spacing: 5px;
-            color: #FF69B4;
-            outline: none;
-            background: #F0FDFF;
+            padding: 15px; font-size: 24px; width: 160px; border-radius: 20px;
+            border: 3px dashed #B2EBF2; text-align: center; color: #FF69B4; outline: none; background: #F0FDFF;
         }
 
-        /* ぷっくりボタン */
         .start-btn-large {
-            background: linear-gradient(#FFEB3B, #FBC02D);
-            color: #795548;
-            border: none;
-            border-radius: 50px;
-            padding: 18px 40px;
-            font-size: 20px;
-            font-weight: bold;
-            cursor: pointer;
-            box-shadow: 0 6px 0 #F9A825;
-            width: 90%;
-            margin: 20px auto 0;
-            display: block;
-            transition: 0.2s;
+            background: linear-gradient(#FFEB3B, #FBC02D); color: #795548; border: none;
+            border-radius: 50px; padding: 18px 40px; font-size: 20px; font-weight: bold;
+            cursor: pointer; box-shadow: 0 6px 0 #F9A825; width: 90%; margin-top: 20px; transition: 0.2s;
         }
+        .start-btn-large:active { transform: translateY(4px); box-shadow: 0 2px 0 #F9A825; }
+        .start-btn-large:disabled { background: #E0E0E0; box-shadow: 0 6px 0 #BDBDBD; color: #9E9E9E; }
 
-        .start-btn-large:active {
-            transform: translateY(4px);
-            box-shadow: 0 2px 0 #F9A825;
-        }
+        .progress-bar-container { width: 100%; background-color: #E0F7FA; border-radius: 20px; margin-bottom: 25px; height: 18px; overflow: hidden; border: 2px solid #B2EBF2; }
+        .progress-bar { height: 100%; background: repeating-linear-gradient(45deg, #FFD1DC, #FFD1DC 10px, #FFB6C1 10px, #FFB6C1 20px); width: 0%; transition: width 0.5s ease; }
 
-        .start-btn-large:disabled {
-            background: #E0E0E0;
-            box-shadow: 0 6px 0 #BDBDBD;
-            color: #9E9E9E;
-        }
+        .question-box { font-size: 18px; font-weight: bold; color: #00838F; margin-bottom: 25px; padding: 25px; background-color: #F1FDFF; border-radius: 25px; border: 2px dashed #B2EBF2; }
 
-        /* しましまプログレスバー */
-        .progress-bar-container {
-            width: 100%;
-            background-color: #E0F7FA;
-            border-radius: 20px;
-            margin-bottom: 25px;
-            height: 18px;
-            overflow: hidden;
-            border: 2px solid #B2EBF2;
-        }
-        .progress-bar {
-            height: 100%;
-            background: repeating-linear-gradient(45deg, #FFD1DC, #FFD1DC 10px, #FFB6C1 10px, #FFB6C1 20px);
-            width: 0%;
-            transition: width 0.5s ease;
-        }
-
-        /* 質問ボックス */
-        .question-box {
-            font-size: 18px;
-            font-weight: bold;
-            color: #00838F;
-            margin-bottom: 25px;
-            padding: 25px;
-            background-color: #F1FDFF;
-            border-radius: 25px;
-            border: 2px dashed #B2EBF2;
-        }
-
-        /* 選択肢ボタン */
         .option-btn {
-            background: white;
-            color: #444;
-            border: 3px solid #FFD1DC;
-            border-radius: 30px;
-            padding: 15px 20px;
-            font-size: 16px;
-            cursor: pointer;
-            font-weight: bold;
-            text-align: center;
-            transition: 0.2s;
-            box-shadow: 0 4px 0 #FFD1DC;
+            background: white; color: #444; border: 3px solid #FFD1DC; border-radius: 30px;
+            padding: 15px 20px; font-size: 16px; cursor: pointer; font-weight: bold; box-shadow: 0 4px 0 #FFD1DC; transition: 0.2s;
         }
         .option-btn:hover { background: #FFF9FA; border-color: #FF69B4; }
         .option-btn:active { transform: translateY(3px); box-shadow: 0 1px 0 #FFD1DC; }
         .neutral-btn { border-color: #CFD8DC; box-shadow: 0 4px 0 #CFD8DC; color: #78909C; }
 
-        /* 結果エリア */
-        .animal-icon { font-size: 90px; margin: 10px 0; display: block; filter: drop-shadow(3px 3px 0 #fff); }
-        .type-title { font-size: 26px; color: #FF1493; font-weight: bold; margin-bottom: 5px; }
-        .desc { font-size: 14px; line-height: 1.8; text-align: left; background: #FFF9FA; padding: 20px; border-radius: 25px; border: 2px solid #FFD1DC; color: #555; }
-
-        /* 非表示制御 */
         #quiz-area, #result-area { display: none; }
         .error-message { color: #FF5252; font-size: 14px; font-weight: bold; margin-top: 10px; display: none; }
-        #back-button { background: none; border: none; color: #888; text-decoration: underline; cursor: pointer; margin-top: 15px; }
-
-        .fade-in { animation: fadeIn 0.6s ease-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+        .animal-icon { font-size: 90px; filter: drop-shadow(3px 3px 0 #fff); }
+        .type-title { font-size: 26px; color: #FF1493; font-weight: bold; }
+        .desc { font-size: 14px; text-align: left; background: #FFF9FA; padding: 20px; border-radius: 25px; border: 2px solid #FFD1DC; }
     </style>
 </head>
 <body>
@@ -166,35 +76,30 @@
 <div class="container">
     <div id="start-screen">
         <h1>✨ マネータイプ診断 ✨</h1>
-        <p id="loading-message" style="font-size:12px; color:#B0BEC5;">魔法をかけています...🪄</p>
-        
+        <p id="loading-message" style="font-size:12px; color:#B0BEC5;">魔法をためています...🔋</p>
         <div style="margin: 30px 0;">
             <label class="input-label">参加コードを入れてね ✨</label>
             <input type="tel" id="group-code" class="code-input" maxlength="4" placeholder="0000">
             <div id="code-error" class="error-message">⚠️ コードがちがうみたい...！</div>
         </div>
-
         <button class="start-btn-large" id="start-button" onclick="startGame()" disabled>診断をはじめる！ 💖</button>
     </div>
 
     <div id="quiz-area">
         <p style="color:#0097A7; font-weight:bold;">しつもん <span id="q-number">1</span> / <span id="q-total">--</span></p>
         <div class="progress-bar-container"><div id="progress-bar" class="progress-bar"></div></div>
-        
         <div id="quiz-content" class="fade-in">
             <div class="question-box" id="question-text"></div>
             <div id="options-container" style="display: flex; flex-direction: column; gap: 15px;"></div>
         </div>
-        <button id="back-button" onclick="goBack()">ひとつ前に戻る ⏪</button>
+        <button id="back-button" onclick="goBack()" style="background:none; border:none; color:#888; text-decoration:underline; cursor:pointer; margin-top:15px;">ひとつ前に戻る ⏪</button>
     </div>
 
-    <div id="result-area" class="fade-in">
-        <div id="result-content-container" style="padding: 10px;">
-            <h1 style="font-size: 20px;">🎀 診断結果 🎀</h1>
+    <div id="result-area">
+        <div id="result-content-container">
+            <h1>🎀 診断結果 🎀</h1>
             <div id="result-content"></div>
-            <div style="margin: 20px auto; height: 260px; width: 100%;">
-                <canvas id="radarChart"></canvas>
-            </div>
+            <div style="margin: 20px auto; height: 280px;"><canvas id="radarChart"></canvas></div>
             <div id="result-desc"></div>
         </div>
         <button onclick="downloadResultImage()" class="start-btn-large" style="background:linear-gradient(#00BCD4, #0097A7); color:white; box-shadow:0 6px 0 #006064; font-size:16px;">結果を写真に保存する 📸</button>
@@ -211,6 +116,36 @@
 
     let questions = [], results = {}, validCodes = [], currentQuestionIndex = 0;
     let scores = { A: 0, B: 0, C: 0, D: 0, E: 0, F: 0, G: 0, H: 0, N: 0 }, scoreHistory = [];
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+    // --- 効果音作成関数 ---
+    function playSound(type) {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        const now = audioCtx.currentTime;
+
+        if (type === 'tap') { // ポッ！
+            osc.type = 'sine'; osc.frequency.setValueAtTime(600, now);
+            osc.frequency.exponentialRampToValueAtTime(100, now + 0.1);
+            gain.gain.setValueAtTime(0.3, now); gain.gain.linearRampToValueAtTime(0, now + 0.1);
+            osc.start(); osc.stop(now + 0.1);
+        } else if (type === 'next') { // ピコーン！
+            osc.type = 'square'; osc.frequency.setValueAtTime(880, now);
+            osc.frequency.setValueAtTime(1760, now + 0.05);
+            gain.gain.setValueAtTime(0.1, now); gain.gain.linearRampToValueAtTime(0, now + 0.15);
+            osc.start(); osc.stop(now + 0.15);
+        } else if (type === 'finish') { // ピロリロリーン！
+            [523, 659, 783, 1046].forEach((f, i) => {
+                const o = audioCtx.createOscillator(); const g = audioCtx.createGain();
+                o.type = 'triangle'; o.connect(g); g.connect(audioCtx.destination);
+                o.frequency.setValueAtTime(f, now + i*0.1);
+                g.gain.setValueAtTime(0.2, now + i*0.1); g.gain.linearRampToValueAtTime(0, now + i*0.1 + 0.3);
+                o.start(now + i*0.1); o.stop(now + i*0.1 + 0.3);
+            });
+        }
+    }
 
     async function loadData() {
         try {
@@ -225,14 +160,14 @@
             document.getElementById('loading-message').innerText = "じゅんびOK！";
             document.getElementById('q-total').innerText = questions.length;
             document.getElementById('start-button').disabled = false;
-        } catch (e) {
-            document.getElementById('loading-message').innerText = "エラー：データがとどかなかったよ 😢";
-        }
+        } catch (e) { document.getElementById('loading-message').innerText = "エラー：ロード失敗 😢"; }
     }
 
     function startGame() {
+        if (audioCtx.state === 'suspended') audioCtx.resume();
         const inputCode = document.getElementById('group-code').value;
         if (validCodes.includes(inputCode)) {
+            playSound('next');
             document.getElementById('start-screen').style.display = 'none';
             document.getElementById('quiz-area').style.display = 'block';
             showQuestion();
@@ -254,6 +189,7 @@
             btn.innerText = opt.text;
             btn.className = 'option-btn ' + (opt.type === "N" ? 'neutral-btn' : '');
             btn.onclick = () => {
+                playSound('tap');
                 scoreHistory.push(JSON.parse(JSON.stringify(scores)));
                 scores[opt.type]++;
                 currentQuestionIndex++;
@@ -265,6 +201,7 @@
 
     function goBack() {
         if (currentQuestionIndex > 0) {
+            playSound('tap');
             currentQuestionIndex--;
             scores = scoreHistory.pop();
             showQuestion();
@@ -272,31 +209,38 @@
     }
 
     function showResult() {
-        if (typeof confetti === 'function') confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 }, colors: ['#FF69B4', '#B2EBF2', '#FFEB3B'] });
+        playSound('finish');
+        confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
         document.getElementById('quiz-area').style.display = 'none';
         document.getElementById('result-area').style.display = 'block';
+
         let maxType = "A", maxScore = 0;
         for (let t in scores) { if(t !== 'N' && scores[t] > maxScore) { maxScore = scores[t]; maxType = t; } }
         if (scores.N > maxScore) maxType = "N";
+
         const res = results[maxType];
         document.getElementById('result-content').innerHTML = `<span class="animal-icon">${res.animal}</span><div class="type-title">${res.title}</div><p style="font-weight:bold; color:#FF69B4;">${res.catch}</p>`;
         document.getElementById('result-desc').innerHTML = `<div class="desc">${res.desc}</div>`;
-        drawChart(scores);
+
+        const currentData = [scores.A+scores.G+scores.C, scores.B+scores.F, scores.E+scores.H, scores.D*2];
+        const lastData = JSON.parse(localStorage.getItem('lastMoneyScore'));
+        drawChart(currentData, lastData);
+        localStorage.setItem('lastMoneyScore', JSON.stringify(currentData));
+        
         sendResultToDatabase(maxType, maxScore);
     }
 
-    function drawChart(s) {
-        const ctx = document.getElementById('radarChart').getContext('2d');
-        new Chart(ctx, {
+    function drawChart(current, last) {
+        const datasets = [{
+            label: '今回のあなた', data: current, backgroundColor: 'rgba(255, 105, 180, 0.4)', borderColor: '#FF69B4', borderWidth: 3, pointBackgroundColor: '#FF1493'
+        }];
+        if (last) datasets.push({
+            label: '前回のあなた', data: last, backgroundColor: 'rgba(178, 235, 242, 0.2)', borderColor: '#00BCD4', borderWidth: 2, borderDash: [5, 5], pointBackgroundColor: '#0097A7'
+        });
+        new Chart(document.getElementById('radarChart'), {
             type: 'radar',
-            data: {
-                labels: ['守る', '使う', '増やす', '分ける'],
-                datasets: [{
-                    data: [s.A+s.G+s.C, s.B+s.F, s.E+s.H, s.D*2],
-                    backgroundColor: 'rgba(255, 182, 193, 0.5)', borderColor: '#FF69B4', borderWidth: 3, pointBackgroundColor: '#FF1493'
-                }]
-            },
-            options: { scales: { r: { beginAtZero: true, suggestedMax: 8, ticks: { display: false } } }, plugins: { legend: { display: false } } }
+            data: { labels: ['守る', '使う', '増やす', '分ける'], datasets: datasets },
+            options: { scales: { r: { beginAtZero: true, suggestedMax: 8, ticks: { display: false } } }, plugins: { legend: { display: !!last } } }
         });
     }
 
@@ -332,12 +276,8 @@
     }
 
     function downloadResultImage() {
-        const target = document.getElementById('result-content-container');
-        html2canvas(target, { backgroundColor: "#FFF0F5", scale: 2 }).then(canvas => {
-            const link = document.createElement('a');
-            link.download = '診断結果.png';
-            link.href = canvas.toDataURL();
-            link.click();
+        html2canvas(document.getElementById('result-content-container'), { backgroundColor: "#FFF0F5", scale: 2 }).then(canvas => {
+            const link = document.createElement('a'); link.download = '診断結果.png'; link.href = canvas.toDataURL(); link.click();
         });
     }
 
