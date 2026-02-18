@@ -8,7 +8,6 @@
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700;800&display=swap" rel="stylesheet">
-    
     <style>
         :root { --primary-pink: #FF69B4; --deep-pink: #FF1493; --soft-pink: #FFF0F5; --mint-blue: #B2EBF2; --text-dark: #444; }
         body { font-family: 'M PLUS Rounded 1c', sans-serif; background-color: #ffeef8; color: var(--text-dark); text-align: center; padding: 15px; margin: 0; }
@@ -29,7 +28,6 @@
     </style>
 </head>
 <body>
-
 <div class="container">
     <div id="start-screen">
         <h1>✨ マネータイプ診断 ✨</h1>
@@ -40,7 +38,6 @@
         <button id="start-btn" class="btn-main" onclick="startGame()" disabled>診断スタート！ 💖</button>
         <p id="loading-msg" style="font-size:11px; color:#bbb; margin-top: 15px;">読込中...</p>
     </div>
-
     <div id="quiz-area">
         <div id="progress-bar" style="width: 100%; height: 8px; background: #eee; border-radius: 10px; margin-bottom: 20px;">
             <div id="progress-fill" style="width: 0%; height: 100%; background: var(--primary-pink); border-radius: 10px; transition: 0.3s;"></div>
@@ -48,53 +45,48 @@
         <div class="question-box" id="question-text"></div>
         <div id="options-container"></div>
     </div>
-
     <div id="result-area">
         <div id="result-content-container" style="background: white; padding: 10px; border-radius: 35px;">
             <h2 style="color: var(--primary-pink); font-size: 14px;">🎀 診断結果 🎀</h2>
             <div id="result-header"></div>
-            <div class="chart-container">
-                <canvas id="radarChart"></canvas>
-            </div>
+            <div class="chart-container"><canvas id="radarChart"></canvas></div>
             <div id="result-body" class="result-desc-box"></div>
         </div>
         <button onclick="downloadResultImage()" class="btn-main" style="margin-top:25px; background: linear-gradient(#4CAF50, #45a049); color: white; box-shadow: 0 8px 0 #2e7d32; font-size:16px;">結果を写真で保存 📸</button>
         <button onclick="location.reload()" style="background:none; border:none; color:#aaa; margin-top:20px; cursor:pointer;">最初に戻る</button>
     </div>
 </div>
-
 <audio id="se-select" src="https://standard-js.com/audio/select.mp3"></audio>
 <audio id="se-fanfare" src="https://standard-js.com/audio/fanfare.mp3"></audio>
-
 <script>
-    const SHEET_ID = "116tuTmwNpfl4FnpSHB8jQ8MNJb8bHGmzgm2mQ8n7fdY";
+    // ユーザー指定のシートURLをCSV形式に変換
+    const SHEET_URL_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vS9pj-nSE8qg0GTy-VDTdvpDrIJuE6OiJbnE0cOyPtHoV5W98am4V3vKES6H9rlTBfaRxWcUsLuI1VE/pub?gid=1023134718&single=true&output=csv";
     const GAS_URL = "https://script.google.com/macros/s/AKfycbyonMRXOuL9YImjTNlxRYS6RyJtXQe6_PxBJUFt2f6br0mTfzDdA6-rQODUEnIf_lWp/exec";
-    const Q_CSV = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=0`;
+    
+    // 質問用CSV（gid=0）
+    const Q_CSV = "https://docs.google.com/spreadsheets/d/116tuTmwNpfl4FnpSHB8jQ8MNJb8bHGmzgm2mQ8n7fdY/export?format=csv&gid=0";
 
     let questions = [], resultsMaster = {}, validCodes = new Set(), currentIdx = 0;
     let userCode = "";
     let scores = { A:0, B:0, C:0, D:0, E:0, F:0, G:0, H:0, N:0 };
 
-    // スプレッドシートのCSV形式を正確に分解する関数
     function parseCSV(text) {
         const rows = [];
         const lines = text.split(/\r?\n/);
         for (let line of lines) {
-            if (line.trim() === "") continue;
-            // ダブルクォーテーション内のカンマを無視して分割
+            if (!line.trim()) continue;
             const parts = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
             rows.push(parts.map(p => p.replace(/^"|"$/g, '').trim()));
         }
         return rows;
     }
 
-    // 1. 全体設定とコード一覧の読み込み
     async function init() {
         try {
-            const response = await fetch(Q_CSV);
-            const qTxt = await response.text();
-            const rows = parseCSV(qTxt);
-            rows.slice(1).forEach(cols => {
+            // 質問の読み込み
+            const qRes = await fetch(Q_CSV);
+            const qTxt = await qRes.text();
+            parseCSV(qTxt).slice(1).forEach(cols => {
                 if (cols[0]) validCodes.add(cols[0].trim());
                 if (cols[1]) {
                     const opts = [];
@@ -110,44 +102,36 @@
                     }
                 }
             });
+
+            // 結果マスタ（指定URL）の事前読み込み
+            const rRes = await fetch(SHEET_URL_CSV);
+            const rTxt = await rRes.text();
+            parseCSV(rTxt).slice(1).forEach(cols => {
+                if(cols[0]) {
+                    resultsMaster[cols[0].trim().toUpperCase()] = { 
+                        emoji: cols[1], // B列
+                        catch: cols[2], // C列
+                        desc:  cols[3]  // D列
+                    };
+                }
+            });
+
             document.getElementById('loading-msg').innerText = "✨ 準備完了！ ✨";
             document.getElementById('start-btn').disabled = false;
         } catch (e) { 
-            document.getElementById('loading-msg').innerText = "読み込みエラー";
-            console.error(e);
+            document.getElementById('loading-msg').innerText = "通信エラー: 接続を確認してください";
         }
     }
 
-    // 2. 入力されたコードに基づく結果シートの参照
     async function startGame() {
         userCode = document.getElementById('group-code').value.trim();
         if (validCodes.has(userCode)) {
-            try {
-                // スプレッドシートの指定したタブ（1001など）をCSVとして取得
-                const rUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(userCode)}`;
-                const rTxt = await fetch(rUrl).then(r => r.text());
-                const rRows = parseCSV(rTxt);
-                
-                resultsMaster = {};
-                rRows.slice(1).forEach(cols => {
-                    if(cols[0]) {
-                        // 【配置対応】A:type, B:animal(emoji), C:catch, D:desc
-                        resultsMaster[cols[0].trim().toUpperCase()] = { 
-                            emoji: cols[1], // B列
-                            catch: cols[2], // C列
-                            desc:  cols[3]  // D列
-                        };
-                    }
-                });
-
-                document.getElementById('start-screen').style.display = 'none';
-                document.getElementById('quiz-area').style.display = 'block';
-                showQuestion();
-            } catch (err) { 
-                alert("データの読み込みに失敗しました。シート名を確認してください。");
-                console.error(err);
-            }
-        } else { document.getElementById('code-error').style.display = 'block'; }
+            document.getElementById('start-screen').style.display = 'none';
+            document.getElementById('quiz-area').style.display = 'block';
+            showQuestion();
+        } else {
+            document.getElementById('code-error').style.display = 'block';
+        }
     }
 
     function showQuestion() {
@@ -160,9 +144,7 @@
             const btn = document.createElement('button');
             btn.innerText = opt.text; btn.className = 'option-btn';
             btn.onclick = () => {
-                // 音声再生（エラー回避のためtry-catch）
-                try { document.getElementById('se-select').play(); } catch(e) {}
-                
+                try { document.getElementById('se-select').play(); } catch(e){}
                 if(scores[opt.type] !== undefined) scores[opt.type]++;
                 currentIdx++;
                 if (currentIdx < questions.length) showQuestion(); else showResult();
@@ -171,80 +153,41 @@
         });
     }
 
-    // 3. 結果の表示（スプレッドシート参照 ＋ 比較グラフ）
     async function showResult() {
-        try { document.getElementById('se-fanfare').play(); } catch(e) {}
+        try { document.getElementById('se-fanfare').play(); } catch(e){}
         confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
-        
         document.getElementById('quiz-area').style.display = 'none';
         document.getElementById('result-area').style.display = 'block';
 
         let maxType = "A", maxVal = -1;
         for (let t in scores) { if(t !== 'N' && scores[t] > maxVal) { maxVal = scores[t]; maxType = t; } }
 
-        // resultsMasterから、スプレッドシートの内容を取得
-        const res = resultsMaster[maxType] || {emoji:"❓", catch:"タイプ不明", desc:"シートの内容を確認してください"};
-
-        // 画面への書き出し（C列のキャッチコピーとD列の説明文）
-        document.getElementById('result-header').innerHTML = `
-            <span class="animal-emoji">${res.emoji}</span>
-            <div class="result-catch">${res.catch}</div>
-        `;
+        const res = resultsMaster[maxType] || {emoji:"❓", catch:"データなし", desc:"シートの内容を確認してください"};
+        document.getElementById('result-header').innerHTML = `<span class="animal-emoji">${res.emoji}</span><div class="result-catch">${res.catch}</div>`;
         document.getElementById('result-body').innerText = res.desc;
 
-        // 集計用GAS送信
         if (GAS_URL.includes("http")) {
-            const formData = new FormData();
+            const formData = new URLSearchParams();
             formData.append('groupCode', userCode);
             formData.append('type', maxType);
-            formData.append('animal', res.catch); 
-            fetch(GAS_URL, { method: "POST", body: new URLSearchParams(formData), mode: "no-cors" });
+            formData.append('animal', res.catch);
+            fetch(GAS_URL, { method: "POST", body: formData, mode: "no-cors" });
         }
 
-        // グラフ比較システム
-        const userData = [
-            scores.A + scores.G + scores.C, 
-            scores.B + scores.F,           
-            scores.E + scores.H,           
-            scores.D * 2                   
-        ];
-        const avgData = [2, 2.5, 1.8, 1.5]; // 比較用平均データ
-
+        const userData = [scores.A + scores.G + scores.C, scores.B + scores.F, scores.E + scores.H, scores.D * 2];
         new Chart(document.getElementById('radarChart'), {
             type: 'radar',
             data: { 
                 labels: ['守る力', '使う力', '増やす力', '分ける力'], 
                 datasets: [
-                    { 
-                        label: 'あなた', 
-                        data: userData, 
-                        backgroundColor: 'rgba(255, 105, 180, 0.5)', 
-                        borderColor: '#FF69B4', 
-                        borderWidth: 4,
-                        pointRadius: 4,
-                        z: 2 
-                    },
-                    { 
-                        label: '平均', 
-                        data: avgData, 
-                        backgroundColor: 'rgba(200, 200, 200, 0.2)', 
-                        borderColor: '#ccc', 
-                        borderWidth: 2, 
-                        borderDash: [5, 5], 
-                        pointRadius: 0,
-                        z: 1 
-                    }
+                    { label: 'あなた', data: userData, backgroundColor: 'rgba(255, 105, 180, 0.5)', borderColor: '#FF69B4', borderWidth: 4, z: 2 },
+                    { label: '平均', data: [2, 2.5, 1.8, 1.5], backgroundColor: 'rgba(200, 200, 200, 0.2)', borderColor: '#ccc', borderWidth: 2, borderDash: [5, 5], z: 1 }
                 ] 
             },
-            options: { 
-                responsive: true, 
-                maintainAspectRatio: false,
-                scales: { r: { beginAtZero: true, suggestedMax: 5 } } 
-            }
+            options: { responsive: true, maintainAspectRatio: false, scales: { r: { beginAtZero: true, suggestedMax: 5 } } }
         });
     }
 
-    // 4. 結果画像保存
     function downloadResultImage() {
         html2canvas(document.getElementById('result-content-container'), { scale: 2, backgroundColor: "#ffffff" }).then(canvas => {
             const link = document.createElement('a');
@@ -252,7 +195,6 @@
             link.href = canvas.toDataURL(); link.click();
         });
     }
-
     window.onload = init;
 </script>
 </body>
