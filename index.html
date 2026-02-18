@@ -43,14 +43,12 @@
 
         h1 { color: var(--primary-pink); font-size: 22px; text-shadow: 2px 2px 0 #fff; margin-bottom: 20px; }
 
-        /* 入力パーツ */
         .code-input {
             padding: 15px; font-size: 24px; width: 150px; border-radius: 20px;
             border: 3px dashed var(--mint-blue); text-align: center; color: var(--primary-pink);
             outline: none; background: #F0FDFF; letter-spacing: 4px;
         }
 
-        /* ぷっくりボタン */
         .btn-main {
             background: linear-gradient(#FFEB3B, #FBC02D); color: #795548; border: none;
             border-radius: 50px; padding: 16px 30px; font-size: 18px; font-weight: bold;
@@ -59,11 +57,9 @@
         .btn-main:active { transform: translateY(4px); box-shadow: 0 2px 0 #F9A825; }
         .btn-main:disabled { background: #E0E0E0; box-shadow: 0 6px 0 #BDBDBD; color: #9E9E9E; }
 
-        /* プログレスバー */
         .progress-bar-container { width: 100%; background: #E0F7FA; border-radius: 20px; margin-bottom: 20px; height: 12px; overflow: hidden; border: 2px solid var(--mint-blue); }
         .progress-bar { height: 100%; background: repeating-linear-gradient(45deg, #FFD1DC, #FFD1DC 10px, #FFB6C1 10px, #FFB6C1 20px); width: 0%; transition: width 0.4s ease; }
 
-        /* 質問エリア */
         .question-box { font-size: 18px; font-weight: bold; color: #00838F; margin-bottom: 20px; padding: 20px; background: #F1FDFF; border-radius: 25px; border: 2px dashed var(--mint-blue); }
         .option-btn {
             background: white; border: 3px solid #FFD1DC; border-radius: 30px; padding: 14px 18px;
@@ -71,11 +67,9 @@
         }
         .option-btn:active { transform: translateY(3px); box-shadow: 0 1px 0 #FFD1DC; }
 
-        /* 結果画面の構成（読み疲れ防止） */
         .animal-icon { font-size: 80px; display: block; margin: 10px 0; }
         .type-title { font-size: 24px; color: #FF1493; font-weight: bold; margin-bottom: 10px; }
         
-        /* 褒めちぎる文章エリア */
         .result-desc-box {
             text-align: left; background: #FFF9FA; padding: 20px; border-radius: 25px;
             border: 2px solid #FFD1DC; font-size: 15px; margin-top: 15px;
@@ -83,7 +77,6 @@
         .desc-text { color: #555; line-height: 1.8; margin-bottom: 15px; }
         .desc-text b { background: linear-gradient(transparent 60%, #FFFACD 0%); color: #FF1493; }
 
-        /* アドバイスエリア */
         .advice-box {
             background: #E0F7FA; padding: 15px; border-radius: 15px; border-left: 5px solid #00BCD4;
             font-size: 14px; color: #006064; font-weight: bold;
@@ -119,10 +112,12 @@
     </div>
 
     <div id="result-area" class="fade-in">
-        <div id="result-content-container" style="padding: 5px;">
+        <div id="result-content-container" style="padding: 10px;">
             <h2 style="font-size:18px; color:#FF69B4; margin-top:0;">🎀 診断結果 🎀</h2>
             <div id="result-header"></div>
-            <div style="margin: 15px auto; height: 250px;"><canvas id="radarChart"></canvas></div>
+            <div style="margin: 15px auto; height: 280px; position: relative;">
+                <canvas id="radarChart"></canvas>
+            </div>
             <div id="result-body" class="result-desc-box"></div>
         </div>
         <button onclick="downloadResultImage()" class="btn-main" style="background:linear-gradient(#00BCD4, #0097A7); color:white; box-shadow:0 6px 0 #006064; font-size:15px; margin-top:20px;">結果を写真に保存する 📸</button>
@@ -131,7 +126,7 @@
 </div>
 
 <script>
-    // --- ⚠️ URLをここに設定してください ---
+    // URL設定
     const GOOGLE_APP_URL = "https://script.google.com/macros/s/AKfycbyQN2nMdSiiWG9xy29qc9EgwOkmnS4JCmuNAvTcLD5QPjz4wQeSztrh8pKRV4qQ9pAF/exec"; 
     const QUESTIONS_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vS9pj-nSE8qg0GTy-VDTdvpDrIJuE6OiJbnE0cOyPtHoV5W98am4V3vKES6H9rlTBfaRxWcUsLuI1VE/pub?gid=0&single=true&output=csv"; 
     const RESULTS_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vS9pj-nSE8qg0GTy-VDTdvpDrIJuE6OiJbnE0cOyPtHoV5W98am4V3vKES6H9rlTBfaRxWcUsLuI1VE/pub?gid=1023134718&single=true&output=csv";
@@ -139,28 +134,22 @@
 
     let questions = [], results = {}, validCodes = [], currentQuestionIndex = 0;
     let scores = { A: 0, B: 0, C: 0, D: 0, E: 0, F: 0, G: 0, H: 0, N: 0 }, scoreHistory = [];
-    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    let myChart = null;
 
-    // --- 効果音 ---
-    function playSound(type) {
-        if (audioCtx.state === 'suspended') audioCtx.resume();
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.connect(gain); gain.connect(audioCtx.destination);
-        const now = audioCtx.currentTime;
-        if (type === 'tap') {
-            osc.frequency.setValueAtTime(600, now); osc.frequency.exponentialRampToValueAtTime(100, now+0.1);
-            gain.gain.setValueAtTime(0.2, now); gain.gain.linearRampToValueAtTime(0, now+0.1);
-            osc.start(); osc.stop(now+0.1);
-        } else if (type === 'finish') {
-            [523, 659, 783, 1046].forEach((f, i) => {
-                const o = audioCtx.createOscillator(); const g = audioCtx.createGain();
-                o.connect(g); g.connect(audioCtx.destination);
-                o.frequency.setValueAtTime(f, now + i*0.1);
-                g.gain.setValueAtTime(0.1, now + i*0.1); g.gain.linearRampToValueAtTime(0, now + i*0.1 + 0.4);
-                o.start(now + i*0.1); o.stop(now + i*0.1 + 0.4);
-            });
-        }
+    // CSVパース関数（引用符対応の強力なもの）
+    function strongParseCSV(text) {
+        const rows = [];
+        const regex = /(?:"([^"]*(?:""[^"]*)*)"|([^,\r\n]+)|(?<=,|^)(?=[,\r\n]|$))/g;
+        text.split(/\r?\n/).forEach(line => {
+            if (!line) return;
+            const row = [];
+            let m;
+            while ((m = regex.exec(line)) !== null) {
+                row.push(m[1] !== undefined ? m[1].replace(/""/g, '"') : (m[2] || ""));
+            }
+            rows.push(row);
+        });
+        return rows;
     }
 
     async function loadData() {
@@ -170,19 +159,41 @@
                 fetch(RESULTS_CSV_URL).then(r => r.text()),
                 fetch(CODES_CSV_URL).then(r => r.text())
             ]);
-            questions = parseCSV(qRes, 'q');
-            results = parseCSV(rRes, 'r');
+            
+            // 質問のパース
+            const qRows = strongParseCSV(qRes).slice(1);
+            questions = qRows.map(c => {
+                const options = [];
+                for(let i=1; i<=3; i++) {
+                    if(c[i]) {
+                        const m = c[i].match(/(.*)\((.)\)/);
+                        if(m) options.push({ text: m[1].trim(), type: m[2].trim() });
+                    }
+                }
+                options.push({ text: "どれもあてはまらない", type: "N" });
+                return { text: c[0], options };
+            }).filter(q => q.text);
+
+            // 結果のパース
+            const rRows = strongParseCSV(rRes).slice(1);
+            rRows.forEach(c => {
+                if(c[0]) results[c[0].trim()] = { animal: c[1], title: c[2], catch: c[3], desc: c[4] };
+            });
+
             validCodes = cRes.split(/\r?\n/).map(l => l.trim()).filter(l => l !== "");
+            
             document.getElementById('loading-message').innerText = "じゅんびOK！✨";
             document.getElementById('q-total').innerText = questions.length;
             document.getElementById('start-button').disabled = false;
-        } catch (e) { document.getElementById('loading-message').innerText = "エラー：ロード失敗 😢"; }
+        } catch (e) { 
+            console.error(e);
+            document.getElementById('loading-message').innerText = "エラー：ロード失敗 😢"; 
+        }
     }
 
     function startGame() {
         const inputCode = document.getElementById('group-code').value;
         if (validCodes.includes(inputCode)) {
-            playSound('tap');
             document.getElementById('start-screen').style.display = 'none';
             document.getElementById('quiz-area').style.display = 'block';
             showQuestion();
@@ -201,7 +212,6 @@
             btn.innerText = opt.text;
             btn.className = 'option-btn';
             btn.onclick = () => {
-                playSound('tap');
                 scoreHistory.push(JSON.parse(JSON.stringify(scores)));
                 scores[opt.type]++;
                 currentQuestionIndex++;
@@ -213,7 +223,6 @@
 
     function goBack() {
         if (currentQuestionIndex > 0) {
-            playSound('tap');
             currentQuestionIndex--;
             scores = scoreHistory.pop();
             showQuestion();
@@ -221,20 +230,25 @@
     }
 
     function showResult() {
-        playSound('finish');
         confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
         document.getElementById('quiz-area').style.display = 'none';
         document.getElementById('result-area').style.display = 'block';
 
-        let maxType = "A", maxScore = 0;
-        for (let t in scores) { if(t !== 'N' && scores[t] > maxScore) { maxScore = scores[t]; maxType = t; } }
+        let maxType = "A", maxScore = -1;
+        for (let t in scores) { 
+            if(t !== 'N' && scores[t] > maxScore) { maxScore = scores[t]; maxType = t; } 
+        }
         if (scores.N > maxScore) maxType = "N";
 
-        const res = results[maxType];
-        document.getElementById('result-header').innerHTML = `<span class="animal-icon">${res.animal}</span><div class="type-title">${res.title}</div><p style="font-weight:bold; color:#FF69B4; margin:0;">${res.catch || ''}</p>`;
+        const res = results[maxType] || { animal: "❓", title: "なぞのタイプ", catch: "", desc: "データが見つかりませんでした。" };
         
-        // 文章を褒め部分とアドバイス部分に分ける（スプレッドシートの「💰アドバイス」という文字で分割）
-        let descParts = res.desc.split('💰');
+        document.getElementById('result-header').innerHTML = `
+            <span class="animal-icon">${res.animal || ''}</span>
+            <div class="type-title">${res.title || ''}</div>
+            <p style="font-weight:bold; color:#FF69B4; margin:0;">${res.catch || ''}</p>
+        `;
+        
+        let descParts = (res.desc || "").split('💰');
         let mainDesc = descParts[0];
         let adviceDesc = descParts[1] ? '💰' + descParts[1] : '';
 
@@ -243,25 +257,64 @@
             ${adviceDesc ? `<div class="advice-box">${adviceDesc}</div>` : ''}
         `;
 
-        const currentData = [scores.A+scores.G+scores.C, scores.B+scores.F, scores.E+scores.H, scores.D*2];
-        const lastData = JSON.parse(localStorage.getItem('lastMoneyScore'));
-        drawChart(currentData, lastData);
-        localStorage.setItem('lastMoneyScore', JSON.stringify(currentData));
+        const currentData = [
+            scores.A + scores.G + scores.C, // 守る
+            scores.B + scores.F,             // 使う
+            scores.E + scores.H,             // 増やす
+            scores.D * 2                     // 分ける
+        ];
         
+        const lastData = JSON.parse(localStorage.getItem('lastMoneyScore'));
+        
+        // グラフ描画（前回のチャートがあれば破棄）
+        if (myChart) myChart.destroy();
+        drawChart(currentData, lastData);
+        
+        localStorage.setItem('lastMoneyScore', JSON.stringify(currentData));
         sendResultToDatabase(maxType, maxScore);
     }
 
     function drawChart(current, last) {
         const datasets = [{
-            label: '今回のあなた', data: current, backgroundColor: 'rgba(255, 105, 180, 0.4)', borderColor: '#FF69B4', borderWidth: 3, pointBackgroundColor: '#FF1493'
+            label: '今回のあなた', 
+            data: current, 
+            backgroundColor: 'rgba(255, 105, 180, 0.4)', 
+            borderColor: '#FF69B4', 
+            borderWidth: 3, 
+            pointBackgroundColor: '#FF1493'
         }];
-        if (last) datasets.push({
-            label: '前回のあなた', data: last, backgroundColor: 'rgba(178, 235, 242, 0.2)', borderColor: '#00BCD4', borderWidth: 2, borderDash: [5, 5], pointBackgroundColor: '#0097A7'
-        });
-        new Chart(document.getElementById('radarChart'), {
+        
+        if (last && last.length === current.length) {
+            datasets.push({
+                label: '前回のあなた', 
+                data: last, 
+                backgroundColor: 'rgba(178, 235, 242, 0.2)', 
+                borderColor: '#00BCD4', 
+                borderWidth: 2, 
+                borderDash: [5, 5], 
+                pointBackgroundColor: '#0097A7'
+            });
+        }
+
+        const ctx = document.getElementById('radarChart').getContext('2d');
+        myChart = new Chart(ctx, {
             type: 'radar',
-            data: { labels: ['守る', '使う', '増やす', '分ける'], datasets: datasets },
-            options: { scales: { r: { beginAtZero: true, suggestedMax: 8, ticks: { display: false } } }, plugins: { legend: { display: !!last } } }
+            data: { 
+                labels: ['守る', '使う', '増やす', '分ける'], 
+                datasets: datasets 
+            },
+            options: { 
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: { 
+                    r: { 
+                        beginAtZero: true, 
+                        suggestedMax: 8, 
+                        ticks: { display: false, stepSize: 2 } 
+                    } 
+                }, 
+                plugins: { legend: { display: !!last } } 
+            }
         });
     }
 
@@ -271,35 +324,13 @@
         fetch(GOOGLE_APP_URL, { method: 'POST', mode: 'no-cors', body: data });
     }
 
-    function parseCSV(csv, mode) {
-        const rows = csv.split('\n').slice(1);
-        if (mode === 'q') {
-            return rows.map(row => {
-                const c = row.split(',');
-                const options = [];
-                for(let i=1; i<=3; i++) {
-                    if(c[i]) {
-                        const m = c[i].match(/(.*)\((.)\)/);
-                        if(m) options.push({ text: m[1], type: m[2] });
-                    }
-                }
-                options.push({ text: "どれもあてはまらない", type: "N" });
-                return { text: c[0], options };
-            }).filter(q => q.text);
-        } else {
-            const obj = {};
-            rows.forEach(row => {
-                const c = row.split(',');
-                if(c[0]) obj[c[0].trim()] = { animal: c[1], title: c[2], catch: c[3], desc: c[4] };
-            });
-            return obj;
-        }
-    }
-
     function downloadResultImage() {
         const target = document.getElementById('result-content-container');
         html2canvas(target, { backgroundColor: "#FFF0F5", scale: 2 }).then(canvas => {
-            const link = document.createElement('a'); link.download = '診断結果.png'; link.href = canvas.toDataURL(); link.click();
+            const link = document.createElement('a'); 
+            link.download = '診断結果.png'; 
+            link.href = canvas.toDataURL(); 
+            link.click();
         });
     }
 
