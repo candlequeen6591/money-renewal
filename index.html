@@ -56,11 +56,10 @@
 </div>
 
 <script>
-    // --- 🛠️ 以下の2か所を必ず書き換えてください ---
-    const SHEET_ID = "1vS9pj-nSE8qg0GTy-VDTdvpDrIJuE6OiJbnE0cOyPtHoV5W98am4V3vKES6H9rlTBfaRxWcUsLuI1VE";
+    // --- 🛠️ 1か所だけ書き換えてください ---
+    const SHEET_ID = "116tuTmwNpfl4FnpSHB8jQ8MNJb8bHGmzgm2mQ8n7fdY";
     const GAS_URL = "https://script.google.com/macros/s/AKfycbxPRgWnMmKJM0uH5ct3BEonKumToXsxqe399kH5UBIxNtBAcIXRl1Go4J9gNy6sFiUR/exec";
     
-    // 質問とコードリストを含むメインシート(gid=0)
     const Q_CSV = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=0`;
 
     let questions = [], resultsMaster = {}, validCodes = new Set(), currentIdx = 0;
@@ -86,16 +85,12 @@
             const qTxt = await response.text();
             const rows = parseCSV(qTxt);
 
-            // スプレッドシートの構造：A列=コード、B列=質問文、C〜G列=選択肢
             rows.slice(1).forEach(cols => {
-                // A列のコードを有効リストに追加
                 if (cols[0]) validCodes.add(cols[0].toString().trim());
-
-                // B列の質問文がある場合、質問リストに追加
                 const qText = cols[1];
                 if (qText) {
                     const opts = [];
-                    for(let i=2; i<=6; i++) { // C列(2)〜G列(6)
+                    for(let i=2; i<=6; i++) {
                         if(cols[i]) {
                             const m = cols[i].match(/(.*)\((.)\)/);
                             if(m) opts.push({ text: m[1].trim(), type: m[2].toUpperCase() });
@@ -119,7 +114,6 @@
         userCode = document.getElementById('group-code').value.trim();
         if (validCodes.has(userCode)) {
             try {
-                // 入力されたコード（タブ名）から解説データを取得
                 const rUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(userCode)}`;
                 const rTxt = await fetch(rUrl).then(r => r.text());
                 
@@ -133,7 +127,7 @@
                 document.getElementById('quiz-area').style.display = 'block';
                 showQuestion();
             } catch (err) {
-                alert("エラー：シート「" + userCode + "」が読み込めません。タブ名が合っているか確認してください。");
+                alert("エラー：シート「" + userCode + "」が読み込めません。タブ名を確認してください。");
             }
         } else {
             document.getElementById('code-error').style.display = 'block';
@@ -168,7 +162,6 @@
             if(t !== 'N' && scores[t] > maxVal) { maxVal = scores[t]; maxType = t; } 
         }
 
-        // --- 📊 集計データをGASへ送信（書き込み実行） ---
         if (GAS_URL && GAS_URL.includes("http")) {
             const formData = new FormData();
             formData.append('groupCode', userCode);
