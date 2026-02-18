@@ -13,9 +13,10 @@
         body { font-family: "Hiragino Kaku Gothic ProN", sans-serif; background-color: var(--soft-pink); color: var(--text-dark); text-align: center; padding: 15px; margin: 0; }
         .container { max-width: 500px; margin: 10px auto; background: white; border-radius: 40px; padding: 25px 20px; box-shadow: 0 10px 0 #FFC0CB; border: 8px solid var(--mint-blue); position: relative; }
         h1 { color: var(--primary-pink); font-size: 22px; margin-bottom: 20px; }
-        .code-input { padding: 15px; font-size: 24px; width: 150px; border-radius: 20px; border: 3px dashed var(--mint-blue); text-align: center; outline: none; }
+        .code-input { padding: 15px; font-size: 24px; width: 150px; border-radius: 20px; border: 3px dashed var(--mint-blue); text-align: center; outline: none; background: #fdfdfd; }
         .btn-main { background: linear-gradient(#FFEB3B, #FBC02D); color: #795548; border: none; border-radius: 50px; padding: 16px 30px; font-size: 18px; font-weight: bold; cursor: pointer; box-shadow: 0 6px 0 #F9A825; width: 90%; transition: 0.1s; }
-        .btn-main:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-main:active { transform: translateY(3px); box-shadow: 0 3px 0 #F9A825; }
+        .btn-main:disabled { opacity: 0.5; }
         .question-box { font-size: 18px; font-weight: bold; color: #00838F; margin-bottom: 20px; padding: 20px; background: #F1FDFF; border-radius: 25px; border: 2px dashed var(--mint-blue); }
         .option-btn { background: white; border: 3px solid #FFD1DC; border-radius: 30px; padding: 14px 18px; font-size: 15px; cursor: pointer; margin-bottom: 12px; width: 100%; font-weight: bold; box-shadow: 0 4px 0 #FFD1DC; }
         .result-desc-box { text-align: left; background: #FFF9FA; padding: 20px; border-radius: 25px; border: 2px solid #FFD1DC; line-height: 1.8; white-space: pre-wrap; font-size: 15px; margin-top: 10px; }
@@ -27,10 +28,10 @@
 <div class="container">
     <div id="start-screen">
         <h1>✨ マネータイプ診断 ✨</h1>
-        <p id="loading-msg" style="font-size:12px; color:#999;">じゅんび中...</p>
+        <p id="loading-msg" style="font-size:12px; color:#999;">魔法のデータを読み込み中...</p>
         <div style="margin: 25px 0;">
             <input type="tel" id="group-code" class="code-input" maxlength="4" placeholder="0000">
-            <p id="code-error" style="color:#FF5252; font-weight:bold; display:none;">⚠️ コードがちがうよ！</p>
+            <p id="code-error" style="color:#FF5252; font-weight:bold; display:none;">⚠️ コードがちがうみたい！</p>
         </div>
         <button id="start-btn" class="btn-main" onclick="startGame()" disabled>診断をはじめる！ 💖</button>
     </div>
@@ -44,7 +45,7 @@
         <div id="result-content-container" style="background: white; padding: 10px;">
             <h2 style="color: var(--primary-pink); margin-top:0;">🎀 診断結果 🎀</h2>
             <div id="result-header"></div>
-            <div style="height: 300px; width: 100%; margin: 0 auto; position: relative;">
+            <div style="height: 320px; width: 100%; margin: 0 auto;">
                 <canvas id="radarChart"></canvas>
             </div>
             <div id="result-body" class="result-desc-box"></div>
@@ -56,9 +57,9 @@
 
 <script>
     // --- 音源 ---
-    const soundTap = new Audio('https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3');
-    const soundSuccess = new Audio('https://assets.mixkit.co/active_storage/sfx/1435/1435-preview.mp3');
-    const soundError = new Audio('https://assets.mixkit.co/active_storage/sfx/951/951-preview.mp3');
+    const soundTap = new Audio('https://otologic.jp/free/se/bin/button03.mp3'); 
+    const soundSuccess = new Audio('https://otologic.jp/free/se/bin/tada01.mp3'); 
+    const soundError = new Audio('https://otologic.jp/free/se/bin/error01.mp3'); 
 
     const Q_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vS9pj-nSE8qg0GTy-VDTdvpDrIJuE6OiJbnE0cOyPtHoV5W98am4V3vKES6H9rlTBfaRxWcUsLuI1VE/pub?gid=0&single=true&output=csv"; 
     const R_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vS9pj-nSE8qg0GTy-VDTdvpDrIJuE6OiJbnE0cOyPtHoV5W98am4V3vKES6H9rlTBfaRxWcUsLuI1VE/pub?gid=1023134718&single=true&output=csv";
@@ -68,26 +69,27 @@
     let scores = { A:0, B:0, C:0, D:0, E:0, F:0, G:0, H:0, N:0 };
     let myChart = null;
 
-    // 高精度CSVパース関数
+    // 精密CSVパース関数
     function parseCSV(text) {
         const rows = []; let row = []; let field = ""; let inQuotes = false;
-        for (let i = 0; i < text.length; i++) {
-            const char = text[i];
+        const cleanText = text.replace(/\r/g, "");
+        for (let i = 0; i < cleanText.length; i++) {
+            const char = cleanText[i];
             if (inQuotes) {
-                if (char === '"' && text[i+1] === '"') { field += '"'; i++; }
+                if (char === '"' && cleanText[i+1] === '"') { field += '"'; i++; }
                 else if (char === '"') inQuotes = false;
                 else field += char;
             } else {
                 if (char === '"') inQuotes = true;
                 else if (char === ',') { row.push(field); field = ""; }
-                else if (char === '\r' || char === '\n') {
+                else if (char === '\n') {
                     row.push(field); field = "";
-                    if (row.length > 0) rows.push(row);
-                    row = []; if (char === '\r' && text[i+1] === '\n') i++;
+                    if (row.join("").trim() !== "") rows.push(row);
+                    row = [];
                 } else field += char;
             }
         }
-        if (row.length > 0 || field) { row.push(field); rows.push(row); }
+        if (field || row.length > 0) { row.push(field); rows.push(row); }
         return rows;
     }
 
@@ -99,10 +101,9 @@
                 fetch(C_CSV).then(r => r.text())
             ]);
             
-            // 質問のパース
-            const qData = parseCSV(qTxt);
-            questions = qData.slice(1).map(c => {
-                if(c.length < 2) return null;
+            // 質問パース
+            parseCSV(qTxt).slice(1).forEach(c => {
+                if(c.length < 2) return;
                 const opts = [];
                 for(let i=1; i<=3; i++) {
                     if(c[i]) {
@@ -111,30 +112,29 @@
                     }
                 }
                 opts.push({ text: "どれもあてはまらない", type: "N" });
-                return { text: c[0], options: opts };
-            }).filter(q => q);
+                questions.push({ text: c[0], options: opts });
+            });
 
-            // 結果のパース
-            const rData = parseCSV(rTxt);
-            rData.slice(1).forEach(c => {
+            // 結果パース
+            parseCSV(rTxt).slice(1).forEach(c => {
                 if(c[0]) resultsMaster[c[0].trim().toUpperCase()] = { animal:c[1], title:c[2], catch:c[3], desc:c[4] };
             });
 
-            validCodes = cTxt.split(/\r?\n/).map(l => l.trim()).filter(l => l);
+            validCodes = cTxt.split(/\n/).map(l => l.trim()).filter(l => l);
             document.getElementById('loading-msg').innerText = "じゅんび完了！✨";
             document.getElementById('start-btn').disabled = false;
         } catch (e) { 
-            console.error(e);
-            document.getElementById('loading-msg').innerText = "エラー：再読み込みしてね"; 
+            document.getElementById('loading-msg').innerText = "通信エラー😢 再読み込みしてね"; 
         }
     }
 
     function startGame() {
+        // 音声をアンロック（iOS/Safari対策）
+        [soundTap, soundSuccess, soundError].forEach(s => { s.play(); s.pause(); s.currentTime = 0; });
+
         const code = document.getElementById('group-code').value;
-        // 音声再生の制限を解除するために一度再生
-        soundTap.play().catch(() => {}); 
-        
         if (validCodes.includes(code)) {
+            soundTap.play();
             document.getElementById('start-screen').style.display = 'none';
             document.getElementById('quiz-area').style.display = 'block';
             showQuestion();
@@ -175,26 +175,25 @@
             if(t !== 'N' && scores[t] > maxScore) { maxScore = scores[t]; maxType = t; } 
         }
 
-        const res = resultsMaster[maxType] || { animal: "🦄", title: "にじいろ", catch: "無限の可能性！", desc: "キミは自由なタイプだ！" };
-        document.getElementById('result-header').innerHTML = `<span style="font-size:70px;">${res.animal}</span><div style="font-size:24px; color:#FF1493; font-weight:bold;">${res.title}</div><p style="font-weight:bold; color:var(--primary-pink);">${res.catch}</p>`;
+        const res = resultsMaster[maxType] || { animal: "🌈", title: "にじいろ", catch: "無限の可能性！", desc: "キミは自由だ！" };
+        document.getElementById('result-header').innerHTML = `<span style="font-size:70px;">${res.animal}</span><div style="font-size:24px; color:#FF1493; font-weight:bold;">${res.title}</div><p style="font-weight:bold; color:var(--primary-pink); margin:5px 0;">${res.catch}</p>`;
         document.getElementById('result-body').innerText = res.desc;
 
-        // グラフ用データ計算
         const currentData = [
-            scores.A + scores.G + scores.C,
-            scores.B + scores.F,
-            scores.E + scores.H,
-            scores.D * 2
+            scores.A + scores.G + scores.C, // 守る
+            scores.B + scores.F,           // 使う
+            scores.E + scores.H,           // 増やす
+            scores.D * 2                   // 分ける
         ];
 
-        // 比較用データの取得
         const lastDataStr = localStorage.getItem('last_money_score');
         const datasets = [{
             label: '今回のキミ',
             data: currentData,
             backgroundColor: 'rgba(255, 105, 180, 0.4)',
             borderColor: '#FF69B4',
-            borderWidth: 3
+            borderWidth: 3,
+            pointBackgroundColor: '#FF69B4'
         }];
 
         if (lastDataStr) {
@@ -207,7 +206,6 @@
                 borderDash: [5, 5]
             });
         }
-        // 今回のデータを保存
         localStorage.setItem('last_money_score', JSON.stringify(currentData));
 
         const ctx = document.getElementById('radarChart').getContext('2d');
@@ -216,9 +214,8 @@
             type: 'radar',
             data: { labels: ['守る', '使う', '増やす', '分ける'], datasets: datasets },
             options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: { r: { beginAtZero: true, suggestedMax: 5, ticks: { display: false } } },
+                responsive: true, maintainAspectRatio: false,
+                scales: { r: { beginAtZero: true, suggestedMax: 5, ticks: { display: false }, grid: { color: '#E0E0E0' } } },
                 plugins: { legend: { display: !!lastDataStr, position: 'bottom' } }
             }
         });
@@ -227,7 +224,7 @@
     function downloadResultImage() {
         soundTap.play();
         const area = document.getElementById('result-content-container');
-        html2canvas(area, { scale: 2 }).then(canvas => {
+        html2canvas(area, { scale: 2, backgroundColor: "#FFF0F5" }).then(canvas => {
             const link = document.createElement('a');
             link.download = 'マネー診断結果.png';
             link.href = canvas.toDataURL();
