@@ -54,8 +54,6 @@
             border-radius: 50px; padding: 16px 30px; font-size: 18px; font-weight: bold;
             cursor: pointer; box-shadow: 0 6px 0 #F9A825; width: 90%; transition: 0.2s;
         }
-        .btn-main:active { transform: translateY(4px); box-shadow: 0 2px 0 #F9A825; }
-        .btn-main:disabled { background: #E0E0E0; box-shadow: 0 6px 0 #BDBDBD; color: #9E9E9E; }
 
         .progress-bar-container { width: 100%; background: #E0F7FA; border-radius: 20px; margin-bottom: 20px; height: 12px; overflow: hidden; border: 2px solid var(--mint-blue); }
         .progress-bar { height: 100%; background: repeating-linear-gradient(45deg, #FFD1DC, #FFD1DC 10px, #FFB6C1 10px, #FFB6C1 20px); width: 0%; transition: width 0.4s ease; }
@@ -64,12 +62,10 @@
         .option-btn {
             background: white; border: 3px solid #FFD1DC; border-radius: 30px; padding: 14px 18px;
             font-size: 15px; cursor: pointer; font-weight: bold; box-shadow: 0 4px 0 #FFD1DC; transition: 0.2s;
+            width: 100%;
         }
-        .option-btn:active { transform: translateY(3px); box-shadow: 0 1px 0 #FFD1DC; }
 
-        .animal-icon { font-size: 80px; display: block; margin: 10px 0; }
-        .type-title { font-size: 24px; color: #FF1493; font-weight: bold; margin-bottom: 10px; }
-        
+        /* 結果エリアのスタイル強化 */
         .result-desc-box {
             text-align: left; background: #FFF9FA; padding: 20px; border-radius: 25px;
             border: 2px solid #FFD1DC; font-size: 15px; margin-top: 15px;
@@ -79,7 +75,7 @@
 
         .advice-box {
             background: #E0F7FA; padding: 15px; border-radius: 15px; border-left: 5px solid #00BCD4;
-            font-size: 14px; color: #006064; font-weight: bold;
+            font-size: 14px; color: #006064; font-weight: bold; margin-top: 10px;
         }
 
         #quiz-area, #result-area { display: none; }
@@ -94,9 +90,8 @@
         <h1>✨ マネータイプ診断 ✨</h1>
         <p id="loading-message" style="font-size:12px; color:#B0BEC5;">魔法をためています...🔋</p>
         <div style="margin: 25px 0;">
-            <label style="display:block; font-weight:bold; color:#0097A7; margin-bottom:10px;">参加コードを入れてね ✨</label>
             <input type="tel" id="group-code" class="code-input" maxlength="4" placeholder="0000">
-            <p id="code-error" style="color:#FF5252; font-size:13px; font-weight:bold; display:none;">⚠️ コードがちがうみたい...！</p>
+            <p id="code-error" style="color:#FF5252; font-size:13px; font-weight:bold; display:none;">⚠️ コードがちがうみたい！</p>
         </div>
         <button class="btn-main" id="start-button" onclick="startGame()" disabled>診断をはじめる！ 💖</button>
     </div>
@@ -112,15 +107,17 @@
     </div>
 
     <div id="result-area" class="fade-in">
-        <div id="result-content-container" style="padding: 10px;">
+        <div id="result-content-container" style="padding: 10px; background: white;">
             <h2 style="font-size:18px; color:#FF69B4; margin-top:0;">🎀 診断結果 🎀</h2>
             <div id="result-header"></div>
-            <div style="margin: 15px auto; height: 280px; position: relative;">
+            
+            <div style="margin: 15px auto; width: 100%; height: 300px;">
                 <canvas id="radarChart"></canvas>
             </div>
+            
             <div id="result-body" class="result-desc-box"></div>
         </div>
-        <button onclick="downloadResultImage()" class="btn-main" style="background:linear-gradient(#00BCD4, #0097A7); color:white; box-shadow:0 6px 0 #006064; font-size:15px; margin-top:20px;">結果を写真に保存する 📸</button>
+        <button onclick="downloadResultImage()" class="btn-main" style="background:linear-gradient(#00BCD4, #0097A7); color:white; box-shadow:0 6px 0 #006064; font-size:15px; margin-top:20px; width: 90%;">結果を写真に保存する 📸</button>
         <button onclick="location.reload()" style="background:none; border:none; color:#888; margin-top:15px; cursor:pointer; font-size:13px;">もう一度診断する</button>
     </div>
 </div>
@@ -136,19 +133,20 @@
     let scores = { A: 0, B: 0, C: 0, D: 0, E: 0, F: 0, G: 0, H: 0, N: 0 }, scoreHistory = [];
     let myChart = null;
 
-    // CSVパース関数（引用符対応の強力なもの）
-    function strongParseCSV(text) {
+    // CSVを安全に読み込む関数
+    function parseCSV(text) {
         const rows = [];
-        const regex = /(?:"([^"]*(?:""[^"]*)*)"|([^,\r\n]+)|(?<=,|^)(?=[,\r\n]|$))/g;
-        text.split(/\r?\n/).forEach(line => {
-            if (!line) return;
-            const row = [];
-            let m;
-            while ((m = regex.exec(line)) !== null) {
-                row.push(m[1] !== undefined ? m[1].replace(/""/g, '"') : (m[2] || ""));
+        const lines = text.split(/\r?\n/);
+        for (let line of lines) {
+            if (!line) continue;
+            // カンマで分割するが、引用符内のカンマは無視する
+            const matches = line.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g);
+            if (matches) {
+                rows.push(matches.map(m => m.replace(/^"|"$/g, '')));
+            } else {
+                rows.push(line.split(',')); // 予備
             }
-            rows.push(row);
-        });
+        }
         return rows;
     }
 
@@ -160,44 +158,45 @@
                 fetch(CODES_CSV_URL).then(r => r.text())
             ]);
             
-            // 質問のパース
-            const qRows = strongParseCSV(qRes).slice(1);
+            // 質問の解析
+            const qRows = parseCSV(qRes).slice(1);
             questions = qRows.map(c => {
-                const options = [];
+                const opts = [];
                 for(let i=1; i<=3; i++) {
                     if(c[i]) {
                         const m = c[i].match(/(.*)\((.)\)/);
-                        if(m) options.push({ text: m[1].trim(), type: m[2].trim() });
+                        if(m) opts.push({ text: m[1].trim(), type: m[2].trim() });
                     }
                 }
-                options.push({ text: "どれもあてはまらない", type: "N" });
-                return { text: c[0], options };
+                opts.push({ text: "どれもあてはまらない", type: "N" });
+                return { text: c[0], options: opts };
             }).filter(q => q.text);
 
-            // 結果のパース
-            const rRows = strongParseCSV(rRes).slice(1);
+            // 結果の解析
+            const rRows = parseCSV(rRes).slice(1);
             rRows.forEach(c => {
                 if(c[0]) results[c[0].trim()] = { animal: c[1], title: c[2], catch: c[3], desc: c[4] };
             });
 
             validCodes = cRes.split(/\r?\n/).map(l => l.trim()).filter(l => l !== "");
-            
             document.getElementById('loading-message').innerText = "じゅんびOK！✨";
             document.getElementById('q-total').innerText = questions.length;
             document.getElementById('start-button').disabled = false;
-        } catch (e) { 
-            console.error(e);
-            document.getElementById('loading-message').innerText = "エラー：ロード失敗 😢"; 
+        } catch (e) {
+            console.error("データ読み込みエラー:", e);
+            document.getElementById('loading-message').innerText = "通信エラー 😢";
         }
     }
 
     function startGame() {
-        const inputCode = document.getElementById('group-code').value;
-        if (validCodes.includes(inputCode)) {
+        const code = document.getElementById('group-code').value;
+        if (validCodes.includes(code)) {
             document.getElementById('start-screen').style.display = 'none';
             document.getElementById('quiz-area').style.display = 'block';
             showQuestion();
-        } else { document.getElementById('code-error').style.display = 'block'; }
+        } else {
+            document.getElementById('code-error').style.display = 'block';
+        }
     }
 
     function showQuestion() {
@@ -240,23 +239,25 @@
         }
         if (scores.N > maxScore) maxType = "N";
 
-        const res = results[maxType] || { animal: "❓", title: "なぞのタイプ", catch: "", desc: "データが見つかりませんでした。" };
+        const res = results[maxType] || { animal: "🦄", title: "にじいろタイプ", catch: "無限の可能性！", desc: "あなたはどのタイプにも当てはまらない、自由な感性の持ち主です！ 💰アドバイス：そのままのキミでいてね！" };
         
         document.getElementById('result-header').innerHTML = `
-            <span class="animal-icon">${res.animal || ''}</span>
-            <div class="type-title">${res.title || ''}</div>
-            <p style="font-weight:bold; color:#FF69B4; margin:0;">${res.catch || ''}</p>
+            <span class="animal-icon">${res.animal}</span>
+            <div class="type-title">${res.title}</div>
+            <p style="font-weight:bold; color:#FF69B4; margin:5px 0;">${res.catch}</p>
         `;
         
-        let descParts = (res.desc || "").split('💰');
-        let mainDesc = descParts[0];
-        let adviceDesc = descParts[1] ? '💰' + descParts[1] : '';
+        const fullDesc = res.desc || "";
+        const parts = fullDesc.split('💰');
+        const mainText = parts[0];
+        const adviceText = parts[1] ? '💰' + parts[1] : "";
 
         document.getElementById('result-body').innerHTML = `
-            <div class="desc-text">${mainDesc}</div>
-            ${adviceDesc ? `<div class="advice-box">${adviceDesc}</div>` : ''}
+            <div class="desc-text">${mainText}</div>
+            ${adviceText ? `<div class="advice-box">${adviceText}</div>` : ""}
         `;
 
+        // グラフデータの作成
         const currentData = [
             scores.A + scores.G + scores.C, // 守る
             scores.B + scores.F,             // 使う
@@ -264,72 +265,48 @@
             scores.D * 2                     // 分ける
         ];
         
-        const lastData = JSON.parse(localStorage.getItem('lastMoneyScore'));
-        
-        // グラフ描画（前回のチャートがあれば破棄）
-        if (myChart) myChart.destroy();
-        drawChart(currentData, lastData);
-        
-        localStorage.setItem('lastMoneyScore', JSON.stringify(currentData));
+        // 描画を少し遅らせる（確実にエリアが表示されてから描くため）
+        setTimeout(() => {
+            if (myChart) myChart.destroy();
+            const ctx = document.getElementById('radarChart').getContext('2d');
+            myChart = new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: ['守る', '使う', '増やす', '分ける'],
+                    datasets: [{
+                        label: '今回のキミ',
+                        data: currentData,
+                        backgroundColor: 'rgba(255, 105, 180, 0.4)',
+                        borderColor: '#FF69B4',
+                        borderWidth: 3,
+                        pointBackgroundColor: '#FF1493'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        r: { beginAtZero: true, suggestedMax: 5, ticks: { display: false } }
+                    }
+                }
+            });
+        }, 100);
+
         sendResultToDatabase(maxType, maxScore);
     }
 
-    function drawChart(current, last) {
-        const datasets = [{
-            label: '今回のあなた', 
-            data: current, 
-            backgroundColor: 'rgba(255, 105, 180, 0.4)', 
-            borderColor: '#FF69B4', 
-            borderWidth: 3, 
-            pointBackgroundColor: '#FF1493'
-        }];
-        
-        if (last && last.length === current.length) {
-            datasets.push({
-                label: '前回のあなた', 
-                data: last, 
-                backgroundColor: 'rgba(178, 235, 242, 0.2)', 
-                borderColor: '#00BCD4', 
-                borderWidth: 2, 
-                borderDash: [5, 5], 
-                pointBackgroundColor: '#0097A7'
-            });
-        }
-
-        const ctx = document.getElementById('radarChart').getContext('2d');
-        myChart = new Chart(ctx, {
-            type: 'radar',
-            data: { 
-                labels: ['守る', '使う', '増やす', '分ける'], 
-                datasets: datasets 
-            },
-            options: { 
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: { 
-                    r: { 
-                        beginAtZero: true, 
-                        suggestedMax: 8, 
-                        ticks: { display: false, stepSize: 2 } 
-                    } 
-                }, 
-                plugins: { legend: { display: !!last } } 
-            }
-        });
-    }
-
     function sendResultToDatabase(type, score) {
-        const groupCode = document.getElementById('group-code').value;
-        const data = new URLSearchParams({ groupCode, type, score });
+        const code = document.getElementById('group-code').value;
+        const data = new URLSearchParams({ groupCode: code, type: type, score: score });
         fetch(GOOGLE_APP_URL, { method: 'POST', mode: 'no-cors', body: data });
     }
 
     function downloadResultImage() {
         const target = document.getElementById('result-content-container');
-        html2canvas(target, { backgroundColor: "#FFF0F5", scale: 2 }).then(canvas => {
-            const link = document.createElement('a'); 
-            link.download = '診断結果.png'; 
-            link.href = canvas.toDataURL(); 
+        html2canvas(target).then(canvas => {
+            const link = document.createElement('a');
+            link.download = '診断結果.png';
+            link.href = canvas.toDataURL();
             link.click();
         });
     }
