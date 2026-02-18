@@ -56,15 +56,16 @@
         <button onclick="location.reload()" style="background:none; border:none; color:#aaa; margin-top:20px; cursor:pointer;">最初に戻る</button>
     </div>
 </div>
+
 <audio id="se-select" src="https://standard-js.com/audio/select.mp3"></audio>
 <audio id="se-fanfare" src="https://standard-js.com/audio/fanfare.mp3"></audio>
+
 <script>
-    // ユーザー指定のシートURLをCSV形式に変換
-    const SHEET_URL_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vS9pj-nSE8qg0GTy-VDTdvpDrIJuE6OiJbnE0cOyPtHoV5W98am4V3vKES6H9rlTBfaRxWcUsLuI1VE/pub?gid=1023134718&single=true&output=csv";
-    const GAS_URL = "https://script.google.com/macros/s/AKfycbyonMRXOuL9YImjTNlxRYS6RyJtXQe6_PxBJUFt2f6br0mTfzDdA6-rQODUEnIf_lWp/exec";
-    
-    // 質問用CSV（gid=0）
-    const Q_CSV = "https://docs.google.com/spreadsheets/d/116tuTmwNpfl4FnpSHB8jQ8MNJb8bHGmzgm2mQ8n7fdY/export?format=csv&gid=0";
+    // --- 🔗 すべての接続先URLを統合 ---
+    const SHEET_ID = "116tuTmwNpfl4FnpSHB8jQ8MNJb8bHGmzgm2mQ8n7fdY";
+    const Q_CSV = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=0`;
+    const RESULTS_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vS9pj-nSE8qg0GTy-VDTdvpDrIJuE6OiJbnE0cOyPtHoV5W98am4V3vKES6H9rlTBfaRxWcUsLuI1VE/pub?gid=1023134718&single=true&output=csv";
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbyUi_zfv1Gsk2Yw6VnudCvEIrFP8lcRFE02Jc20Hz3CvOQxD9x4wIcYPTZpDMyBKGOD/exec";
 
     let questions = [], resultsMaster = {}, validCodes = new Set(), currentIdx = 0;
     let userCode = "";
@@ -81,13 +82,14 @@
         return rows;
     }
 
+    // ① コードの参照とマスタの読み込み
     async function init() {
         try {
-            // 質問の読み込み
+            // 質問と有効コード(A列)の読み込み
             const qRes = await fetch(Q_CSV);
             const qTxt = await qRes.text();
             parseCSV(qTxt).slice(1).forEach(cols => {
-                if (cols[0]) validCodes.add(cols[0].trim());
+                if (cols[0]) validCodes.add(cols[0].trim()); // A列：コード
                 if (cols[1]) {
                     const opts = [];
                     for(let i=2; i<=6; i++) {
@@ -103,26 +105,23 @@
                 }
             });
 
-            // 結果マスタ（指定URL）の事前読み込み
-            const rRes = await fetch(SHEET_URL_CSV);
+            // ⑤ 結果マスタ(resultsシート)の読み込み
+            const rRes = await fetch(RESULTS_MASTER_CSV);
             const rTxt = await rRes.text();
             parseCSV(rTxt).slice(1).forEach(cols => {
                 if(cols[0]) {
                     resultsMaster[cols[0].trim().toUpperCase()] = { 
-                        emoji: cols[1], // B列
-                        catch: cols[2], // C列
-                        desc:  cols[3]  // D列
+                        emoji: cols[1], catch: cols[2], desc: cols[3] 
                     };
                 }
             });
 
             document.getElementById('loading-msg').innerText = "✨ 準備完了！ ✨";
             document.getElementById('start-btn').disabled = false;
-        } catch (e) { 
-            document.getElementById('loading-msg').innerText = "通信エラー: 接続を確認してください";
-        }
+        } catch (e) { document.getElementById('loading-msg').innerText = "通信エラー：接続を確認してください"; }
     }
 
+    // ② 診断開始
     async function startGame() {
         userCode = document.getElementById('group-code').value.trim();
         if (validCodes.has(userCode)) {
@@ -145,6 +144,7 @@
             btn.innerText = opt.text; btn.className = 'option-btn';
             btn.onclick = () => {
                 try { document.getElementById('se-select').play(); } catch(e){}
+                // ③ 診断によりスコア化
                 if(scores[opt.type] !== undefined) scores[opt.type]++;
                 currentIdx++;
                 if (currentIdx < questions.length) showQuestion(); else showResult();
@@ -159,22 +159,34 @@
         document.getElementById('quiz-area').style.display = 'none';
         document.getElementById('result-area').style.display = 'block';
 
+        // ④ アルファベットに落とし込む
         let maxType = "A", maxVal = -1;
         for (let t in scores) { if(t !== 'N' && scores[t] > maxVal) { maxVal = scores[t]; maxType = t; } }
 
-        const res = resultsMaster[maxType] || {emoji:"❓", catch:"データなし", desc:"シートの内容を確認してください"};
+        // ⑤ resultsのシートを参照し表示
+        const res = resultsMaster[maxType] || {emoji:"❓", catch:"不明", desc:"シートの内容を確認してください"};
         document.getElementById('result-header').innerHTML = `<span class="animal-emoji">${res.emoji}</span><div class="result-catch">${res.catch}</div>`;
         document.getElementById('result-body').innerText = res.desc;
 
+        // ⑥ codesのシートの4桁タブに結果を保存（GAS送信）
         if (GAS_URL.includes("http")) {
             const formData = new URLSearchParams();
-            formData.append('groupCode', userCode);
+            formData.append('groupCode', userCode); // これがスプレッドシートのタブ名になります
             formData.append('type', maxType);
             formData.append('animal', res.catch);
             fetch(GAS_URL, { method: "POST", body: formData, mode: "no-cors" });
         }
 
-        const userData = [scores.A + scores.G + scores.C, scores.B + scores.F, scores.E + scores.H, scores.D * 2];
+        // 📊 グラフ描画（守る・使う・増やす・分ける）
+        const userData = [
+            scores.A + scores.G + scores.C, 
+            scores.B + scores.F,           
+            scores.E + scores.H,           
+            scores.D * 2                   
+        ];
+        
+        
+
         new Chart(document.getElementById('radarChart'), {
             type: 'radar',
             data: { 
