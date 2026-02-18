@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>✨ わくわく！マネータイプ診断！ ✨</title>
+    <title>✨ マネータイプ診断（フル機能版） ✨</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -23,20 +23,14 @@
             background-size: 30px 30px;
             color: var(--text-dark);
             text-align: center;
-            padding: 15px;
-            margin: 0;
-            line-height: 1.6;
+            padding: 15px; margin: 0;
         }
 
         .container {
-            max-width: 500px;
-            margin: 10px auto;
-            background: white;
-            border-radius: 40px;
-            padding: 25px 20px;
-            box-shadow: 0 10px 0 #FFC0CB;
-            border: 8px solid var(--mint-blue);
-            position: relative;
+            max-width: 500px; margin: 10px auto;
+            background: white; border-radius: 40px;
+            padding: 25px 20px; box-shadow: 0 10px 0 #FFC0CB;
+            border: 8px solid var(--mint-blue); position: relative;
         }
 
         .container::before { content: "🎀"; font-size: 50px; position: absolute; top: -35px; right: -5px; transform: rotate(15deg); }
@@ -65,14 +59,11 @@
             width: 100%;
         }
 
-        /* 結果エリアのスタイル強化 */
         .result-desc-box {
             text-align: left; background: #FFF9FA; padding: 20px; border-radius: 25px;
             border: 2px solid #FFD1DC; font-size: 15px; margin-top: 15px;
         }
-        .desc-text { color: #555; line-height: 1.8; margin-bottom: 15px; }
-        .desc-text b { background: linear-gradient(transparent 60%, #FFFACD 0%); color: #FF1493; }
-
+        .desc-text { color: #555; line-height: 1.8; margin-bottom: 15px; white-space: pre-wrap; }
         .advice-box {
             background: #E0F7FA; padding: 15px; border-radius: 15px; border-left: 5px solid #00BCD4;
             font-size: 14px; color: #006064; font-weight: bold; margin-top: 10px;
@@ -103,7 +94,6 @@
             <div class="question-box" id="question-text"></div>
             <div id="options-container" style="display: flex; flex-direction: column; gap: 12px;"></div>
         </div>
-        <button onclick="goBack()" style="background:none; border:none; color:#888; text-decoration:underline; cursor:pointer; margin-top:20px; font-size:13px;">ひとつ前に戻る ⏪</button>
     </div>
 
     <div id="result-area" class="fade-in">
@@ -111,7 +101,7 @@
             <h2 style="font-size:18px; color:#FF69B4; margin-top:0;">🎀 診断結果 🎀</h2>
             <div id="result-header"></div>
             
-            <div style="margin: 15px auto; width: 100%; height: 300px;">
+            <div style="margin: 15px auto; width: 100%; height: 300px; position: relative;">
                 <canvas id="radarChart"></canvas>
             </div>
             
@@ -123,195 +113,43 @@
 </div>
 
 <script>
-    // URL設定
+    // --- 各URL設定 ---
     const GOOGLE_APP_URL = "https://script.google.com/macros/s/AKfycbyQN2nMdSiiWG9xy29qc9EgwOkmnS4JCmuNAvTcLD5QPjz4wQeSztrh8pKRV4qQ9pAF/exec"; 
     const QUESTIONS_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vS9pj-nSE8qg0GTy-VDTdvpDrIJuE6OiJbnE0cOyPtHoV5W98am4V3vKES6H9rlTBfaRxWcUsLuI1VE/pub?gid=0&single=true&output=csv"; 
     const RESULTS_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vS9pj-nSE8qg0GTy-VDTdvpDrIJuE6OiJbnE0cOyPtHoV5W98am4V3vKES6H9rlTBfaRxWcUsLuI1VE/pub?gid=1023134718&single=true&output=csv";
     const CODES_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTu7LeLdHPVzh45ghYextA9pyFarqes1_VESG8wkFNVFSNekdQi85RBq3f-swWHQy8Wjr9IpQnrdncS/pub?output=csv";
 
     let questions = [], results = {}, validCodes = [], currentQuestionIndex = 0;
-    let scores = { A: 0, B: 0, C: 0, D: 0, E: 0, F: 0, G: 0, H: 0, N: 0 }, scoreHistory = [];
-    let myChart = null;
+    let scores = { A: 0, B: 0, C: 0, D: 0, E: 0, F: 0, G: 0, H: 0, N: 0 };
 
-    // CSVを安全に読み込む関数
+    // 高精度CSVパース機能
     function parseCSV(text) {
         const rows = [];
-        const lines = text.split(/\r?\n/);
-        for (let line of lines) {
-            if (!line) continue;
-            // カンマで分割するが、引用符内のカンマは無視する
-            const matches = line.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g);
-            if (matches) {
-                rows.push(matches.map(m => m.replace(/^"|"$/g, '')));
+        let row = [];
+        let field = "";
+        let inQuotes = false;
+        for (let i = 0; i < text.length; i++) {
+            const char = text[i];
+            const nextChar = text[i+1];
+            if (inQuotes) {
+                if (char === '"' && nextChar === '"') { field += '"'; i++; }
+                else if (char === '"') { inQuotes = false; }
+                else { field += char; }
             } else {
-                rows.push(line.split(',')); // 予備
+                if (char === '"') { inQuotes = true; }
+                else if (char === ',') { row.push(field); field = ""; }
+                else if (char === '\r' || char === '\n') {
+                    row.push(field); field = "";
+                    if (row.length > 0 && row.some(x => x !== "")) rows.push(row);
+                    row = [];
+                    if (char === '\r' && nextChar === '\n') i++;
+                } else { field += char; }
             }
         }
+        if (field || row.length > 0) { row.push(field); rows.push(row); }
         return rows;
     }
 
     async function loadData() {
         try {
-            const [qRes, rRes, cRes] = await Promise.all([
-                fetch(QUESTIONS_CSV_URL).then(r => r.text()),
-                fetch(RESULTS_CSV_URL).then(r => r.text()),
-                fetch(CODES_CSV_URL).then(r => r.text())
-            ]);
-            
-            // 質問の解析
-            const qRows = parseCSV(qRes).slice(1);
-            questions = qRows.map(c => {
-                const opts = [];
-                for(let i=1; i<=3; i++) {
-                    if(c[i]) {
-                        const m = c[i].match(/(.*)\((.)\)/);
-                        if(m) opts.push({ text: m[1].trim(), type: m[2].trim() });
-                    }
-                }
-                opts.push({ text: "どれもあてはまらない", type: "N" });
-                return { text: c[0], options: opts };
-            }).filter(q => q.text);
-
-            // 結果の解析
-            const rRows = parseCSV(rRes).slice(1);
-            rRows.forEach(c => {
-                if(c[0]) results[c[0].trim()] = { animal: c[1], title: c[2], catch: c[3], desc: c[4] };
-            });
-
-            validCodes = cRes.split(/\r?\n/).map(l => l.trim()).filter(l => l !== "");
-            document.getElementById('loading-message').innerText = "じゅんびOK！✨";
-            document.getElementById('q-total').innerText = questions.length;
-            document.getElementById('start-button').disabled = false;
-        } catch (e) {
-            console.error("データ読み込みエラー:", e);
-            document.getElementById('loading-message').innerText = "通信エラー 😢";
-        }
-    }
-
-    function startGame() {
-        const code = document.getElementById('group-code').value;
-        if (validCodes.includes(code)) {
-            document.getElementById('start-screen').style.display = 'none';
-            document.getElementById('quiz-area').style.display = 'block';
-            showQuestion();
-        } else {
-            document.getElementById('code-error').style.display = 'block';
-        }
-    }
-
-    function showQuestion() {
-        const q = questions[currentQuestionIndex];
-        document.getElementById('question-text').innerText = q.text;
-        document.getElementById('q-number').innerText = currentQuestionIndex + 1;
-        document.getElementById('progress-bar').style.width = (currentQuestionIndex / questions.length * 100) + "%";
-        const container = document.getElementById('options-container');
-        container.innerHTML = "";
-        q.options.forEach(opt => {
-            const btn = document.createElement('button');
-            btn.innerText = opt.text;
-            btn.className = 'option-btn';
-            btn.onclick = () => {
-                scoreHistory.push(JSON.parse(JSON.stringify(scores)));
-                scores[opt.type]++;
-                currentQuestionIndex++;
-                if (currentQuestionIndex < questions.length) showQuestion(); else showResult();
-            };
-            container.appendChild(btn);
-        });
-    }
-
-    function goBack() {
-        if (currentQuestionIndex > 0) {
-            currentQuestionIndex--;
-            scores = scoreHistory.pop();
-            showQuestion();
-        }
-    }
-
-    function showResult() {
-        confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
-        document.getElementById('quiz-area').style.display = 'none';
-        document.getElementById('result-area').style.display = 'block';
-
-        let maxType = "A", maxScore = -1;
-        for (let t in scores) { 
-            if(t !== 'N' && scores[t] > maxScore) { maxScore = scores[t]; maxType = t; } 
-        }
-        if (scores.N > maxScore) maxType = "N";
-
-        const res = results[maxType] || { animal: "🦄", title: "にじいろタイプ", catch: "無限の可能性！", desc: "あなたはどのタイプにも当てはまらない、自由な感性の持ち主です！ 💰アドバイス：そのままのキミでいてね！" };
-        
-        document.getElementById('result-header').innerHTML = `
-            <span class="animal-icon">${res.animal}</span>
-            <div class="type-title">${res.title}</div>
-            <p style="font-weight:bold; color:#FF69B4; margin:5px 0;">${res.catch}</p>
-        `;
-        
-        const fullDesc = res.desc || "";
-        const parts = fullDesc.split('💰');
-        const mainText = parts[0];
-        const adviceText = parts[1] ? '💰' + parts[1] : "";
-
-        document.getElementById('result-body').innerHTML = `
-            <div class="desc-text">${mainText}</div>
-            ${adviceText ? `<div class="advice-box">${adviceText}</div>` : ""}
-        `;
-
-        // グラフデータの作成
-        const currentData = [
-            scores.A + scores.G + scores.C, // 守る
-            scores.B + scores.F,             // 使う
-            scores.E + scores.H,             // 増やす
-            scores.D * 2                     // 分ける
-        ];
-        
-        // 描画を少し遅らせる（確実にエリアが表示されてから描くため）
-        setTimeout(() => {
-            if (myChart) myChart.destroy();
-            const ctx = document.getElementById('radarChart').getContext('2d');
-            myChart = new Chart(ctx, {
-                type: 'radar',
-                data: {
-                    labels: ['守る', '使う', '増やす', '分ける'],
-                    datasets: [{
-                        label: '今回のキミ',
-                        data: currentData,
-                        backgroundColor: 'rgba(255, 105, 180, 0.4)',
-                        borderColor: '#FF69B4',
-                        borderWidth: 3,
-                        pointBackgroundColor: '#FF1493'
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        r: { beginAtZero: true, suggestedMax: 5, ticks: { display: false } }
-                    }
-                }
-            });
-        }, 100);
-
-        sendResultToDatabase(maxType, maxScore);
-    }
-
-    function sendResultToDatabase(type, score) {
-        const code = document.getElementById('group-code').value;
-        const data = new URLSearchParams({ groupCode: code, type: type, score: score });
-        fetch(GOOGLE_APP_URL, { method: 'POST', mode: 'no-cors', body: data });
-    }
-
-    function downloadResultImage() {
-        const target = document.getElementById('result-content-container');
-        html2canvas(target).then(canvas => {
-            const link = document.createElement('a');
-            link.download = '診断結果.png';
-            link.href = canvas.toDataURL();
-            link.click();
-        });
-    }
-
-    window.onload = loadData;
-</script>
-</body>
-</html>
+            const [qRes, rRes,
