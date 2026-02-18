@@ -63,8 +63,8 @@
     </div>
 </div>
 
-<audio id="se-select" src="https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3"></audio>
-<audio id="se-fanfare" src="https://assets.mixkit.co/active_storage/sfx/1435/1435-preview.mp3"></audio>
+<audio id="se-select" src="https://standard-js.com/audio/select.mp3"></audio>
+<audio id="se-fanfare" src="https://standard-js.com/audio/fanfare.mp3"></audio>
 
 <script>
     const SHEET_ID = "116tuTmwNpfl4FnpSHB8jQ8MNJb8bHGmzgm2mQ8n7fdY";
@@ -75,19 +75,20 @@
     let userCode = "";
     let scores = { A:0, B:0, C:0, D:0, E:0, F:0, G:0, H:0, N:0 };
 
-    // スプレッドシートの特殊なCSV形式を正しく解析する関数
+    // スプレッドシートのCSV形式を正確に分解する関数
     function parseCSV(text) {
         const rows = [];
         const lines = text.split(/\r?\n/);
         for (let line of lines) {
             if (line.trim() === "") continue;
-            // カンマ区切りだが、""で囲まれた中身のカンマは無視する正規表現
+            // ダブルクォーテーション内のカンマを無視して分割
             const parts = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
             rows.push(parts.map(p => p.replace(/^"|"$/g, '').trim()));
         }
         return rows;
     }
 
+    // 1. 全体設定とコード一覧の読み込み
     async function init() {
         try {
             const response = await fetch(Q_CSV);
@@ -111,13 +112,18 @@
             });
             document.getElementById('loading-msg').innerText = "✨ 準備完了！ ✨";
             document.getElementById('start-btn').disabled = false;
-        } catch (e) { document.getElementById('loading-msg').innerText = "エラー：公開設定を確認してください"; }
+        } catch (e) { 
+            document.getElementById('loading-msg').innerText = "読み込みエラー";
+            console.error(e);
+        }
     }
 
+    // 2. 入力されたコードに基づく結果シートの参照
     async function startGame() {
         userCode = document.getElementById('group-code').value.trim();
         if (validCodes.has(userCode)) {
             try {
+                // スプレッドシートの指定したタブ（1001など）をCSVとして取得
                 const rUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(userCode)}`;
                 const rTxt = await fetch(rUrl).then(r => r.text());
                 const rRows = parseCSV(rTxt);
@@ -125,7 +131,7 @@
                 resultsMaster = {};
                 rRows.slice(1).forEach(cols => {
                     if(cols[0]) {
-                        // 画像の列順 (A:type, B:emoji, C:catch, D:desc) に合わせました
+                        // 【配置対応】A:type, B:animal(emoji), C:catch, D:desc
                         resultsMaster[cols[0].trim().toUpperCase()] = { 
                             emoji: cols[1], // B列
                             catch: cols[2], // C列
@@ -137,7 +143,10 @@
                 document.getElementById('start-screen').style.display = 'none';
                 document.getElementById('quiz-area').style.display = 'block';
                 showQuestion();
-            } catch (err) { alert("結果データの読み込みに失敗しました。シート名を確認してください。"); }
+            } catch (err) { 
+                alert("データの読み込みに失敗しました。シート名を確認してください。");
+                console.error(err);
+            }
         } else { document.getElementById('code-error').style.display = 'block'; }
     }
 
@@ -151,7 +160,9 @@
             const btn = document.createElement('button');
             btn.innerText = opt.text; btn.className = 'option-btn';
             btn.onclick = () => {
-                document.getElementById('se-select').play();
+                // 音声再生（エラー回避のためtry-catch）
+                try { document.getElementById('se-select').play(); } catch(e) {}
+                
                 if(scores[opt.type] !== undefined) scores[opt.type]++;
                 currentIdx++;
                 if (currentIdx < questions.length) showQuestion(); else showResult();
@@ -160,54 +171,80 @@
         });
     }
 
+    // 3. 結果の表示（スプレッドシート参照 ＋ 比較グラフ）
     async function showResult() {
-        document.getElementById('se-fanfare').play();
+        try { document.getElementById('se-fanfare').play(); } catch(e) {}
         confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
+        
         document.getElementById('quiz-area').style.display = 'none';
         document.getElementById('result-area').style.display = 'block';
 
         let maxType = "A", maxVal = -1;
         for (let t in scores) { if(t !== 'N' && scores[t] > maxVal) { maxVal = scores[t]; maxType = t; } }
 
-        const res = resultsMaster[maxType] || {emoji:"❓", catch:"データなし", desc:"シートの内容を確認してください"};
+        // resultsMasterから、スプレッドシートの内容を取得
+        const res = resultsMaster[maxType] || {emoji:"❓", catch:"タイプ不明", desc:"シートの内容を確認してください"};
 
-        // 結果を表示
+        // 画面への書き出し（C列のキャッチコピーとD列の説明文）
         document.getElementById('result-header').innerHTML = `
             <span class="animal-emoji">${res.emoji}</span>
             <div class="result-catch">${res.catch}</div>
         `;
         document.getElementById('result-body').innerText = res.desc;
 
-        // 集計用送信
+        // 集計用GAS送信
         if (GAS_URL.includes("http")) {
             const formData = new FormData();
             formData.append('groupCode', userCode);
             formData.append('type', maxType);
-            formData.append('animal', res.catch); // キャッチコピーを名前として送信
+            formData.append('animal', res.catch); 
             fetch(GAS_URL, { method: "POST", body: new URLSearchParams(formData), mode: "no-cors" });
         }
 
+        // グラフ比較システム
         const userData = [
             scores.A + scores.G + scores.C, 
             scores.B + scores.F,           
             scores.E + scores.H,           
             scores.D * 2                   
         ];
-        const avgData = [2, 2.5, 1.8, 1.5]; 
+        const avgData = [2, 2.5, 1.8, 1.5]; // 比較用平均データ
 
         new Chart(document.getElementById('radarChart'), {
             type: 'radar',
             data: { 
                 labels: ['守る力', '使う力', '増やす力', '分ける力'], 
                 datasets: [
-                    { label: 'あなた', data: userData, backgroundColor: 'rgba(255, 105, 180, 0.5)', borderColor: '#FF69B4', borderWidth: 4, pointRadius: 4, z: 2 },
-                    { label: '平均', data: avgData, backgroundColor: 'rgba(200, 200, 200, 0.2)', borderColor: '#ccc', borderWidth: 2, borderDash: [5, 5], pointRadius: 0, z: 1 }
+                    { 
+                        label: 'あなた', 
+                        data: userData, 
+                        backgroundColor: 'rgba(255, 105, 180, 0.5)', 
+                        borderColor: '#FF69B4', 
+                        borderWidth: 4,
+                        pointRadius: 4,
+                        z: 2 
+                    },
+                    { 
+                        label: '平均', 
+                        data: avgData, 
+                        backgroundColor: 'rgba(200, 200, 200, 0.2)', 
+                        borderColor: '#ccc', 
+                        borderWidth: 2, 
+                        borderDash: [5, 5], 
+                        pointRadius: 0,
+                        z: 1 
+                    }
                 ] 
             },
-            options: { responsive: true, maintainAspectRatio: false, scales: { r: { beginAtZero: true, suggestedMax: 5 } } }
+            options: { 
+                responsive: true, 
+                maintainAspectRatio: false,
+                scales: { r: { beginAtZero: true, suggestedMax: 5 } } 
+            }
         });
     }
 
+    // 4. 結果画像保存
     function downloadResultImage() {
         html2canvas(document.getElementById('result-content-container'), { scale: 2, backgroundColor: "#ffffff" }).then(canvas => {
             const link = document.createElement('a');
@@ -215,6 +252,7 @@
             link.href = canvas.toDataURL(); link.click();
         });
     }
+
     window.onload = init;
 </script>
 </body>
