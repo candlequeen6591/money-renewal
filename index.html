@@ -56,15 +56,14 @@
 </div>
 
 <script>
-    // --- 🛠️ ここを自分の設定に書き換えてください ---
+    // --- 🛠️ 自分の設定に書き換えてください ---
     const SHEET_ID = "1vS9pj-nSE8qg0GTy-VDTdvpDrIJuE6OiJbnE0cOyPtHoV5W98am4V3vKES6H9rlTBfaRxWcUsLuI1VE";
     const GAS_URL = "https://script.google.com/macros/s/AKfycbxPRgWnMmKJM0uH5ct3BEonKumToXsxqe399kH5UBIxNtBAcIXRl1Go4J9gNy6sFiUR/exec";
     
-    // シート構成
+    // 質問とコードリストを同じシート(gid=0)から読み込む
     const Q_CSV = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=0`;
-    const C_CSV = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=1023134718`;
 
-    let questions = [], resultsMaster = {}, validCodes = [], currentIdx = 0;
+    let questions = [], resultsMaster = {}, validCodes = new Set(), currentIdx = 0;
     let userCode = "";
     let scores = { A:0, B:0, C:0, D:0, E:0, F:0, G:0, H:0, N:0 };
     let myChart = null;
@@ -82,37 +81,44 @@
 
     async function init() {
         try {
-            const [qTxt, cTxt] = await Promise.all([
-                fetch(Q_CSV).then(r => r.text()),
-                fetch(C_CSV).then(r => r.text())
-            ]);
-            
-            parseCSV(qTxt).slice(1).forEach(cols => {
-                const opts = [];
-                for(let i=1; i<=5; i++) {
-                    if(cols[i]) {
-                        const m = cols[i].match(/(.*)\((.)\)/);
-                        if(m) opts.push({ text: m[1].trim(), type: m[2].toUpperCase() });
+            const response = await fetch(Q_CSV);
+            if (!response.ok) throw new Error();
+            const qTxt = await response.text();
+            const rows = parseCSV(qTxt);
+
+            // A列(インデックス0)からコードを収集、B列以降から質問を収集
+            rows.slice(1).forEach(cols => {
+                if (cols[0]) validCodes.add(cols[0].toString().trim());
+
+                const qText = cols[1]; // B列: 質問
+                if (qText) {
+                    const opts = [];
+                    for(let i=2; i<=6; i++) { // C〜G列: 選択肢
+                        if(cols[i]) {
+                            const m = cols[i].match(/(.*)\((.)\)/);
+                            if(m) opts.push({ text: m[1].trim(), type: m[2].toUpperCase() });
+                        }
                     }
-                }
-                if(opts.length > 0) {
-                    opts.push({ text: "どれもあてはまらない", type: "N" });
-                    questions.push({ text: cols[0], options: opts });
+                    if(opts.length > 0) {
+                        opts.push({ text: "どれもあてはまらない", type: "N" });
+                        questions.push({ text: qText, options: opts });
+                    }
                 }
             });
 
-            validCodes = parseCSV(cTxt).map(row => row[0]); 
             document.getElementById('loading-msg').innerText = "じゅんび完了！✨";
             document.getElementById('start-btn').disabled = false;
-        } catch (e) { document.getElementById('loading-msg').innerText = "通信エラー😢"; }
+        } catch (e) { 
+            document.getElementById('loading-msg').innerHTML = "<span style='color:red;'>設定エラー：スプレッドシートの「ウェブに公開」を確認してください</span>"; 
+        }
     }
 
     async function startGame() {
         userCode = document.getElementById('group-code').value.trim();
-        if (validCodes.includes(userCode)) {
+        if (validCodes.has(userCode)) {
             try {
-                // 結果表示用データの取得（シート名 = コード名）
-                const rUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${userCode}`;
+                // 合言葉（userCode）と同じ名前のシートから解説データを取得
+                const rUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(userCode)}`;
                 const rTxt = await fetch(rUrl).then(r => r.text());
                 
                 parseCSV(rTxt).slice(1).forEach(cols => {
@@ -125,7 +131,7 @@
                 document.getElementById('quiz-area').style.display = 'block';
                 showQuestion();
             } catch (err) {
-                alert("シートの読み込みに失敗しました。シート名がコードと一致しているか確認してください。");
+                alert("エラー：シート「" + userCode + "」からデータを読み込めませんでした。");
             }
         } else {
             document.getElementById('code-error').style.display = 'block';
@@ -144,7 +150,7 @@
             btn.onclick = () => {
                 if(scores[opt.type] !== undefined) scores[opt.type]++;
                 currentIdx++;
-                if (currentIdx < questions.length) showResult(); else showQuestion();
+                if (currentIdx < questions.length) showQuestion(); else showResult();
             };
             container.appendChild(btn);
         });
@@ -160,7 +166,7 @@
             if(t !== 'N' && scores[t] > maxVal) { maxVal = scores[t]; maxType = t; } 
         }
 
-        // --- 📊 集計データをGASへ送信 ---
+        // --- 📊 集計データをGASへ送信（書き込み） ---
         const formData = new FormData();
         formData.append('groupCode', userCode);
         formData.append('type', maxType);
