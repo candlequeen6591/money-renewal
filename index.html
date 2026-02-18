@@ -10,31 +10,22 @@
     <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700;800&display=swap" rel="stylesheet">
     
     <style>
-        :root { 
-            --primary-pink: #FF69B4; --deep-pink: #FF1493; --soft-pink: #FFF0F5; 
-            --mint-blue: #B2EBF2; --text-dark: #444; 
-        }
+        :root { --primary-pink: #FF69B4; --deep-pink: #FF1493; --soft-pink: #FFF0F5; --mint-blue: #B2EBF2; --text-dark: #444; }
         body { font-family: 'M PLUS Rounded 1c', sans-serif; background-color: #ffeef8; color: var(--text-dark); text-align: center; padding: 15px; margin: 0; }
         .container { max-width: 480px; margin: 10px auto; background: white; border-radius: 40px; padding: 30px 20px; box-shadow: 0 15px 30px rgba(0,0,0,0.1); border: 6px solid var(--mint-blue); position: relative; }
-        
-        h1 { color: var(--primary-pink); font-size: 26px; font-weight: 800; margin-bottom: 10px; text-shadow: 2px 2px 0 white, 4px 4px 0 rgba(255,105,180,0.2); }
-        .code-input { padding: 15px; font-size: 28px; width: 160px; border-radius: 25px; border: 4px dashed var(--mint-blue); text-align: center; color: var(--deep-pink); font-weight: bold; background: #faffff; outline: none; transition: 0.3s; }
-        .btn-main { background: linear-gradient(to bottom, #FFEB3B, #FBC02D); color: #795548; border: none; border-radius: 50px; padding: 18px 30px; font-size: 20px; font-weight: 800; cursor: pointer; box-shadow: 0 8px 0 #F9A825; width: 90%; transition: 0.2s; }
+        h1 { color: var(--primary-pink); font-size: 26px; font-weight: 800; margin-bottom: 10px; }
+        .code-input { padding: 15px; font-size: 28px; width: 160px; border-radius: 25px; border: 4px dashed var(--mint-blue); text-align: center; color: var(--deep-pink); font-weight: bold; background: #faffff; outline: none; }
+        .btn-main { background: linear-gradient(to bottom, #FFEB3B, #FBC02D); color: #795548; border: none; border-radius: 50px; padding: 18px 30px; font-size: 20px; font-weight: 800; cursor: pointer; box-shadow: 0 8px 0 #F9A825; width: 90%; }
         .btn-main:active { transform: translateY(4px); box-shadow: 0 4px 0 #F9A825; }
         .btn-main:disabled { opacity: 0.5; filter: grayscale(1); }
-
-        .question-box { font-size: 20px; font-weight: 800; color: #007c91; margin-bottom: 25px; padding: 25px; background: linear-gradient(135deg, #e0f7fa 0%, #ffffff 100%); border-radius: 30px; border: 2px solid var(--mint-blue); line-height: 1.5; }
-        .option-btn { background: white; border: 3px solid #FFD1DC; border-radius: 35px; padding: 16px 22px; font-size: 16px; cursor: pointer; margin-bottom: 12px; width: 100%; font-weight: bold; box-shadow: 0 5px 0 #FFD1DC; text-align: left; transition: 0.2s; }
-        .option-btn:hover { background: #fff9fb; border-color: var(--primary-pink); transform: translateX(5px); }
-
+        .question-box { font-size: 20px; font-weight: 800; color: #007c91; margin-bottom: 25px; padding: 25px; background: #f1fdff; border-radius: 30px; border: 2px solid var(--mint-blue); }
+        .option-btn { background: white; border: 3px solid #FFD1DC; border-radius: 35px; padding: 16px 22px; font-size: 16px; cursor: pointer; margin-bottom: 12px; width: 100%; font-weight: bold; box-shadow: 0 5px 0 #FFD1DC; text-align: left; }
         .animal-emoji { font-size: 90px; margin: 10px 0; display: block; animation: bounce 2s infinite; }
         .result-title { font-size: 28px; color: var(--deep-pink); font-weight: 900; margin: 5px 0; }
         .chart-container { position: relative; height: 320px; width: 100%; margin: 10px 0; }
         .result-desc-box { text-align: left; background: #fffcfd; padding: 25px; border-radius: 30px; border: 3px solid #FFD1DC; line-height: 1.8; white-space: pre-wrap; font-size: 15px; margin-top: 20px; }
-
         @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-15px); } }
-        #quiz-area, #result-area { display: none; animation: fadeIn 0.5s ease; }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        #quiz-area, #result-area { display: none; }
     </style>
 </head>
 <body>
@@ -44,10 +35,10 @@
         <h1>✨ マネータイプ診断 ✨</h1>
         <div style="margin: 30px 0;">
             <input type="tel" id="group-code" class="code-input" maxlength="4" placeholder="1001">
-            <p id="code-error" style="color:#FF5252; font-weight:bold; display:none; margin-top:10px;">⚠️ コードが違うよ！</p>
+            <p id="code-error" style="color:#FF5252; font-weight:bold; display:none;">⚠️ コードが違うよ！</p>
         </div>
         <button id="start-btn" class="btn-main" onclick="startGame()" disabled>診断スタート！ 💖</button>
-        <p id="loading-msg" style="font-size:11px; color:#bbb; margin-top: 15px;">データを読み込み中...</p>
+        <p id="loading-msg" style="font-size:11px; color:#bbb; margin-top: 15px;">読込中...</p>
     </div>
 
     <div id="quiz-area">
@@ -59,8 +50,8 @@
     </div>
 
     <div id="result-area">
-        <div id="result-content-container">
-            <h2 style="color: var(--primary-pink); font-size: 14px; letter-spacing: 2px;">🎀 診断結果 🎀</h2>
+        <div id="result-content-container" style="background: white; padding: 10px; border-radius: 35px;">
+            <h2 style="color: var(--primary-pink); font-size: 14px;">🎀 診断結果 🎀</h2>
             <div id="result-header"></div>
             <div class="chart-container">
                 <canvas id="radarChart"></canvas>
@@ -68,7 +59,7 @@
             <div id="result-body" class="result-desc-box"></div>
         </div>
         <button onclick="downloadResultImage()" class="btn-main" style="margin-top:25px; background: linear-gradient(#4CAF50, #45a049); color: white; box-shadow: 0 8px 0 #2e7d32; font-size:16px;">結果を写真で保存 📸</button>
-        <button onclick="location.reload()" style="background:none; border:none; color:#aaa; margin-top:20px; cursor:pointer;">もう一度やる</button>
+        <button onclick="location.reload()" style="background:none; border:none; color:#aaa; margin-top:20px; cursor:pointer;">最初に戻る</button>
     </div>
 </div>
 
@@ -83,20 +74,19 @@
     let questions = [], resultsMaster = {}, validCodes = new Set(), currentIdx = 0;
     let userCode = "";
     let scores = { A:0, B:0, C:0, D:0, E:0, F:0, G:0, H:0, N:0 };
-    const seSelect = document.getElementById('se-select');
-    const seFanfare = document.getElementById('se-fanfare');
 
     function parseCSV(text) {
         const rows = [];
         const lines = text.split(/\r?\n/);
         for (let line of lines) {
             if (line.trim() === "") continue;
-            const parts = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
-            rows.push(parts.map(p => p.replace(/^"|"$/g, '').trim()));
+            const parts = line.split(/,(?=(?:(?:[^\"" ]*\""){2})*[^\"" ]*$)/);
+            rows.push(parts.map(p => p.replace(/^\""|\""$/g, '').trim()));
         }
         return rows;
     }
 
+    // 1. 全体設定の読み込み
     async function init() {
         try {
             const response = await fetch(Q_CSV);
@@ -120,25 +110,34 @@
             });
             document.getElementById('loading-msg').innerText = "✨ 準備完了！ ✨";
             document.getElementById('start-btn').disabled = false;
-        } catch (e) { document.getElementById('loading-msg').innerText = "設定エラーを確認してください"; }
+        } catch (e) { document.getElementById('loading-msg').innerText = "エラー：公開設定を確認してください"; }
     }
 
+    // 2. コードに応じた結果データの読み込み
     async function startGame() {
         userCode = document.getElementById('group-code').value.trim();
         if (validCodes.has(userCode)) {
-            seSelect.play();
             try {
+                // ここで「1001」などのシートから結果を読み込む
                 const rUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(userCode)}`;
                 const rTxt = await fetch(rUrl).then(r => r.text());
-                parseCSV(rTxt).slice(1).forEach(cols => {
-                    if(cols[0]) resultsMaster[cols[0].toUpperCase()] = { 
-                        emoji:cols[1], animal:cols[1], title:cols[2], catch:cols[3], desc:cols[4] 
-                    };
+                const rRows = parseCSV(rTxt);
+                
+                rRows.slice(1).forEach(cols => {
+                    if(cols[0]) {
+                        resultsMaster[cols[0].trim().toUpperCase()] = { 
+                            emoji: cols[1], // アイコン
+                            animal: cols[2], // 動物名（タイトル）
+                            catch: cols[3], // キャッチコピー
+                            desc: cols[4]   // 説明文
+                        };
+                    }
                 });
+
                 document.getElementById('start-screen').style.display = 'none';
                 document.getElementById('quiz-area').style.display = 'block';
                 showQuestion();
-            } catch (err) { alert("データ読込エラー"); }
+            } catch (err) { alert("結果データの読み込みに失敗しました。シート名を確認してください。"); }
         } else { document.getElementById('code-error').style.display = 'block'; }
     }
 
@@ -150,10 +149,8 @@
         container.innerHTML = "";
         q.options.forEach(opt => {
             const btn = document.createElement('button');
-            btn.innerText = opt.text;
-            btn.className = 'option-btn';
+            btn.innerText = opt.text; btn.className = 'option-btn';
             btn.onclick = () => {
-                seSelect.currentTime = 0; seSelect.play();
                 if(scores[opt.type] !== undefined) scores[opt.type]++;
                 currentIdx++;
                 if (currentIdx < questions.length) showQuestion(); else showResult();
@@ -163,7 +160,7 @@
     }
 
     async function showResult() {
-        seFanfare.play();
+        document.getElementById('se-fanfare').play();
         confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
         document.getElementById('quiz-area').style.display = 'none';
         document.getElementById('result-area').style.display = 'block';
@@ -171,47 +168,35 @@
         let maxType = "A", maxVal = -1;
         for (let t in scores) { if(t !== 'N' && scores[t] > maxVal) { maxVal = scores[t]; maxType = t; } }
 
-        const res = resultsMaster[maxType] || {emoji:"✨", animal:"不明", title:"診断完了", catch:"お疲れ様でした", desc:"結果データがありません"};
+        // 結果マスターからデータを取得
+        const res = resultsMaster[maxType] || {emoji:"❓", animal:"不明", catch:"データなし", desc:"シートの内容を確認してください"};
 
-        // --- 📊 スプレッドシートへ送信（動物名を含む） ---
-        if (GAS_URL.includes("http")) {
-            const formData = new FormData();
-            formData.append('groupCode', userCode);
-            formData.append('type', maxType);
-            formData.append('animal', res.animal); // 動物名を送信
-            fetch(GAS_URL, { method: "POST", body: new URLSearchParams(formData), mode: "no-cors" });
-        }
-
+        // 画面に表示
         document.getElementById('result-header').innerHTML = `
             <span class="animal-emoji">${res.emoji}</span>
-            <div class="result-title">${res.title}</div>
+            <div class="result-title">${res.animal}</div>
             <div class="result-catch">〜 ${res.catch} 〜</div>
         `;
         document.getElementById('result-body').innerText = res.desc;
 
-        const userData = [
-            scores.A + scores.G + scores.C, 
-            scores.B + scores.F,           
-            scores.E + scores.H,           
-            scores.D * 2                   
-        ];
-        const avgData = [2, 2.5, 1.8, 1.5]; 
+        // 集計用送信
+        if (GAS_URL.includes("http")) {
+            const formData = new FormData();
+            formData.append('groupCode', userCode);
+            formData.append('type', maxType);
+            formData.append('animal', res.animal); 
+            fetch(GAS_URL, { method: "POST", body: new URLSearchParams(formData), mode: "no-cors" });
+        }
 
-        const ctx = document.getElementById('radarChart').getContext('2d');
-        new Chart(ctx, {
+        // グラフ描画
+        const userData = [scores.A + scores.G + scores.C, scores.B + scores.F, scores.E + scores.H, scores.D * 2];
+        new Chart(document.getElementById('radarChart'), {
             type: 'radar',
             data: { 
                 labels: ['守る力', '使う力', '増やす力', '分ける力'], 
-                datasets: [
-                    { label: 'あなた', data: userData, backgroundColor: 'rgba(255, 105, 180, 0.5)', borderColor: '#FF69B4', borderWidth: 4, pointRadius: 4, pointBackgroundColor: '#FF69B4', z: 2 },
-                    { label: '平均', data: avgData, backgroundColor: 'rgba(200, 200, 200, 0.2)', borderColor: '#ccc', borderWidth: 2, borderDash: [5, 5], pointRadius: 0, z: 1 }
-                ] 
+                datasets: [{ label: 'あなた', data: userData, backgroundColor: 'rgba(255, 105, 180, 0.5)', borderColor: '#FF69B4', borderWidth: 4 }] 
             },
-            options: {
-                responsive: true, maintainAspectRatio: false,
-                scales: { r: { beginAtZero: true, suggestedMax: 5, ticks: { display: false } } },
-                plugins: { legend: { position: 'bottom' } }
-            }
+            options: { scales: { r: { beginAtZero: true, suggestedMax: 5 } } }
         });
     }
 
@@ -219,11 +204,9 @@
         html2canvas(document.getElementById('result-content-container'), { scale: 2, backgroundColor: "#ffffff" }).then(canvas => {
             const link = document.createElement('a');
             link.download = `診断結果_${userCode}.png`;
-            link.href = canvas.toDataURL();
-            link.click();
+            link.href = canvas.toDataURL(); link.click();
         });
     }
-
     window.onload = init;
 </script>
 </body>
