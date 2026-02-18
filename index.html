@@ -25,6 +25,7 @@
         .result-desc-box { text-align: left; background: #fffcfd; padding: 25px; border-radius: 30px; border: 3px solid #FFD1DC; line-height: 1.8; white-space: pre-wrap; font-size: 15px; margin-top: 20px; }
         @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-15px); } }
         #quiz-area, #result-area { display: none; }
+        #debug-log { font-size: 10px; color: #ff5252; margin-top: 10px; text-align: left; display: none; }
     </style>
 </head>
 <body>
@@ -37,6 +38,7 @@
         </div>
         <button id="start-btn" class="btn-main" onclick="startGame()" disabled>診断スタート！ 💖</button>
         <p id="loading-msg" style="font-size:11px; color:#bbb; margin-top: 15px;">読込中...</p>
+        <div id="debug-log"></div>
     </div>
     <div id="quiz-area">
         <div id="progress-bar" style="width: 100%; height: 8px; background: #eee; border-radius: 10px; margin-bottom: 20px;">
@@ -57,19 +59,21 @@
     </div>
 </div>
 
-<audio id="se-select" src="https://standard-js.com/audio/select.mp3"></audio>
-<audio id="se-fanfare" src="https://standard-js.com/audio/fanfare.mp3"></audio>
-
 <script>
-    // --- 🔗 設定 (名前を一致させました) ---
-    const SHEET_ID = "116tuTmwNpfl4FnpSHB8jQ8MNJb8bHGmzgm2mQ8n7fdY";
-    const Q_CSV = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=0`;
-    const RESULTS_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vS9pj-nSE8qg0GTy-VDTdvpDrIJuE6OiJbnE0cOyPtHoV5W98am4V3vKES6H9rlTBfaRxWcUsLuI1VE/pub?gid=1023134718&single=true&output=csv";
+    // --- 🔗 接続設定を完全にベタ書きにしました ---
+    const Q_CSV_URL = "https://docs.google.com/spreadsheets/d/116tuTmwNpfl4FnpSHB8jQ8MNJb8bHGmzgm2mQ8n7fdY/export?format=csv&gid=0";
+    const R_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vS9pj-nSE8qg0GTy-VDTdvpDrIJuE6OiJbnE0cOyPtHoV5W98am4V3vKES6H9rlTBfaRxWcUsLuI1VE/pub?gid=1023134718&single=true&output=csv";
     const GAS_URL = "https://script.google.com/macros/s/AKfycbyUi_zfv1Gsk2Yw6VnudCvEIrFP8lcRFE02Jc20Hz3CvOQxD9x4wIcYPTZpDMyBKGOD/exec";
 
     let questions = [], resultsMaster = {}, validCodes = new Set(), currentIdx = 0;
     let userCode = "";
     let scores = { A:0, B:0, C:0, D:0, E:0, F:0, G:0, H:0, N:0 };
+
+    function logError(msg) {
+        const div = document.getElementById('debug-log');
+        div.style.display = 'block';
+        div.innerHTML += msg + "<br>";
+    }
 
     function parseCSV(text) {
         const rows = [];
@@ -78,3 +82,122 @@
             if (!line.trim()) continue;
             const parts = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
             rows.push(parts.map(p => p.replace(/^"|"$/g, '').trim()));
+        }
+        return rows;
+    }
+
+    async function init() {
+        try {
+            // 1. 質問CSVのフェッチ
+            const qRes = await fetch(Q_CSV_URL);
+            if (!qRes.ok) throw new Error("質問シートの取得に失敗しました");
+            const qTxt = await qRes.text();
+            parseCSV(qTxt).slice(1).forEach(cols => {
+                if (cols[0]) validCodes.add(cols[0].trim());
+                if (cols[1]) {
+                    const opts = [];
+                    for(let i=2; i<=6; i++) {
+                        if(cols[i]) {
+                            const m = cols[i].match(/(.*)\((.)\)/);
+                            if(m) opts.push({ text: m[1].trim(), type: m[2].toUpperCase() });
+                        }
+                    }
+                    if(opts.length > 0) {
+                        opts.push({ text: "どれもあてはまらない", type: "N" });
+                        questions.push({ text: cols[1], options: opts });
+                    }
+                }
+            });
+
+            // 2. 結果マスタCSVのフェッチ
+            const rRes = await fetch(R_CSV_URL);
+            if (!rRes.ok) throw new Error("結果マスタの取得に失敗しました");
+            const rTxt = await rRes.text();
+            parseCSV(rTxt).slice(1).forEach(cols => {
+                if(cols[0]) {
+                    resultsMaster[cols[0].trim().toUpperCase()] = { 
+                        emoji: cols[1], catch: cols[2], desc: cols[3] 
+                    };
+                }
+            });
+
+            document.getElementById('loading-msg').innerText = "✨ 準備完了！ ✨";
+            document.getElementById('start-btn').disabled = false;
+        } catch (e) { 
+            console.error(e);
+            document.getElementById('loading-msg').innerText = "❌ 通信エラーが発生しました";
+            logError("エラー内容: " + e.message);
+        }
+    }
+
+    // startGame, showQuestion, showResult などのロジックは以前の正常なものを維持
+    async function startGame() {
+        userCode = document.getElementById('group-code').value.trim();
+        if (validCodes.has(userCode)) {
+            document.getElementById('start-screen').style.display = 'none';
+            document.getElementById('quiz-area').style.display = 'block';
+            showQuestion();
+        } else {
+            document.getElementById('code-error').style.display = 'block';
+        }
+    }
+
+    function showQuestion() {
+        const q = questions[currentIdx];
+        document.getElementById('progress-fill').style.width = `${(currentIdx / questions.length) * 100}%`;
+        document.getElementById('question-text').innerText = q.text;
+        const container = document.getElementById('options-container');
+        container.innerHTML = "";
+        q.options.forEach(opt => {
+            const btn = document.createElement('button');
+            btn.innerText = opt.text; btn.className = 'option-btn';
+            btn.onclick = () => {
+                if(scores[opt.type] !== undefined) scores[opt.type]++;
+                currentIdx++;
+                if (currentIdx < questions.length) showQuestion(); else showResult();
+            };
+            container.appendChild(btn);
+        });
+    }
+
+    async function showResult() {
+        document.getElementById('quiz-area').style.display = 'none';
+        document.getElementById('result-area').style.display = 'block';
+        confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
+
+        let maxType = "A", maxVal = -1;
+        for (let t in scores) { if(t !== 'N' && scores[t] > maxVal) { maxVal = scores[t]; maxType = t; } }
+
+        const res = resultsMaster[maxType] || {emoji:"❓", catch:"不明", desc:"マスタが見つかりません"};
+        document.getElementById('result-header').innerHTML = `<span class="animal-emoji">${res.emoji}</span><div class="result-catch">${res.catch}</div>`;
+        document.getElementById('result-body').innerText = res.desc;
+
+        // GASへ送信
+        const formData = new URLSearchParams();
+        formData.append('groupCode', userCode);
+        formData.append('type', maxType);
+        formData.append('animal', res.catch);
+        fetch(GAS_URL, { method: "POST", body: formData, mode: "no-cors" });
+
+        const userData = [scores.A + scores.G + scores.C, scores.B + scores.F, scores.E + scores.H, scores.D * 2];
+        new Chart(document.getElementById('radarChart'), {
+            type: 'radar',
+            data: { 
+                labels: ['守る力', '使う力', '増やす力', '分ける力'], 
+                datasets: [{ label: 'あなた', data: userData, backgroundColor: 'rgba(255, 105, 180, 0.5)', borderColor: '#FF69B4', borderWidth: 4 }] 
+            },
+            options: { responsive: true, maintainAspectRatio: false, scales: { r: { beginAtZero: true, suggestedMax: 5 } } }
+        });
+    }
+
+    function downloadResultImage() {
+        html2canvas(document.getElementById('result-content-container'), { scale: 2, backgroundColor: "#ffffff" }).then(canvas => {
+            const link = document.createElement('a');
+            link.download = `診断結果_${userCode}.png`;
+            link.href = canvas.toDataURL(); link.click();
+        });
+    }
+    window.onload = init;
+</script>
+</body>
+</html>
