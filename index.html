@@ -3,72 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>✨ マネータイプ診断（フル機能版） ✨</title>
+    <title>✨ マネータイプ診断 ✨</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     
     <style>
-        :root {
-            --primary-pink: #FF69B4;
-            --soft-pink: #FFF0F5;
-            --mint-blue: #B2EBF2;
-            --text-dark: #444;
-        }
-
-        body {
-            font-family: "Hiragino Kaku Gothic ProN", "メイリオ", sans-serif;
-            background-color: var(--soft-pink);
-            background-image: radial-gradient(#FFD1DC 2px, transparent 2px);
-            background-size: 30px 30px;
-            color: var(--text-dark);
-            text-align: center;
-            padding: 15px; margin: 0;
-        }
-
-        .container {
-            max-width: 500px; margin: 10px auto;
-            background: white; border-radius: 40px;
-            padding: 25px 20px; box-shadow: 0 10px 0 #FFC0CB;
-            border: 8px solid var(--mint-blue); position: relative;
-        }
-
-        .container::before { content: "🎀"; font-size: 50px; position: absolute; top: -35px; right: -5px; transform: rotate(15deg); }
-
-        h1 { color: var(--primary-pink); font-size: 22px; text-shadow: 2px 2px 0 #fff; margin-bottom: 20px; }
-
-        .code-input {
-            padding: 15px; font-size: 24px; width: 150px; border-radius: 20px;
-            border: 3px dashed var(--mint-blue); text-align: center; color: var(--primary-pink);
-            outline: none; background: #F0FDFF; letter-spacing: 4px;
-        }
-
-        .btn-main {
-            background: linear-gradient(#FFEB3B, #FBC02D); color: #795548; border: none;
-            border-radius: 50px; padding: 16px 30px; font-size: 18px; font-weight: bold;
-            cursor: pointer; box-shadow: 0 6px 0 #F9A825; width: 90%; transition: 0.2s;
-        }
-
-        .progress-bar-container { width: 100%; background: #E0F7FA; border-radius: 20px; margin-bottom: 20px; height: 12px; overflow: hidden; border: 2px solid var(--mint-blue); }
-        .progress-bar { height: 100%; background: repeating-linear-gradient(45deg, #FFD1DC, #FFD1DC 10px, #FFB6C1 10px, #FFB6C1 20px); width: 0%; transition: width 0.4s ease; }
-
+        :root { --primary-pink: #FF69B4; --soft-pink: #FFF0F5; --mint-blue: #B2EBF2; --text-dark: #444; }
+        body { font-family: "Hiragino Kaku Gothic ProN", sans-serif; background-color: var(--soft-pink); color: var(--text-dark); text-align: center; padding: 15px; margin: 0; }
+        .container { max-width: 500px; margin: 10px auto; background: white; border-radius: 40px; padding: 25px 20px; box-shadow: 0 10px 0 #FFC0CB; border: 8px solid var(--mint-blue); position: relative; }
+        h1 { color: var(--primary-pink); font-size: 22px; margin-bottom: 20px; }
+        .code-input { padding: 15px; font-size: 24px; width: 150px; border-radius: 20px; border: 3px dashed var(--mint-blue); text-align: center; outline: none; }
+        .btn-main { background: linear-gradient(#FFEB3B, #FBC02D); color: #795548; border: none; border-radius: 50px; padding: 16px 30px; font-size: 18px; font-weight: bold; cursor: pointer; box-shadow: 0 6px 0 #F9A825; width: 90%; transition: 0.1s; }
+        .btn-main:active { transform: translateY(3px); box-shadow: 0 3px 0 #F9A825; }
         .question-box { font-size: 18px; font-weight: bold; color: #00838F; margin-bottom: 20px; padding: 20px; background: #F1FDFF; border-radius: 25px; border: 2px dashed var(--mint-blue); }
-        .option-btn {
-            background: white; border: 3px solid #FFD1DC; border-radius: 30px; padding: 14px 18px;
-            font-size: 15px; cursor: pointer; font-weight: bold; box-shadow: 0 4px 0 #FFD1DC; transition: 0.2s;
-            width: 100%;
-        }
-
-        .result-desc-box {
-            text-align: left; background: #FFF9FA; padding: 20px; border-radius: 25px;
-            border: 2px solid #FFD1DC; font-size: 15px; margin-top: 15px;
-        }
-        .desc-text { color: #555; line-height: 1.8; margin-bottom: 15px; white-space: pre-wrap; }
-        .advice-box {
-            background: #E0F7FA; padding: 15px; border-radius: 15px; border-left: 5px solid #00BCD4;
-            font-size: 14px; color: #006064; font-weight: bold; margin-top: 10px;
-        }
-
+        .option-btn { background: white; border: 3px solid #FFD1DC; border-radius: 30px; padding: 14px 18px; font-size: 15px; cursor: pointer; margin-bottom: 12px; width: 100%; font-weight: bold; box-shadow: 0 4px 0 #FFD1DC; }
+        .option-btn:active { transform: translateY(2px); box-shadow: 0 2px 0 #FFD1DC; }
+        .result-desc-box { text-align: left; background: #FFF9FA; padding: 20px; border-radius: 25px; border: 2px solid #FFD1DC; line-height: 1.8; white-space: pre-wrap; font-size: 15px; }
         #quiz-area, #result-area { display: none; }
     </style>
 </head>
@@ -77,165 +28,178 @@
 <div class="container">
     <div id="start-screen">
         <h1>✨ マネータイプ診断 ✨</h1>
-        <p id="loading-message" style="font-size:12px; color:#B0BEC5;">魔法をためています...🔋</p>
+        <p id="loading-msg" style="font-size:12px; color:#999;">じゅんび中...</p>
         <div style="margin: 25px 0;">
             <input type="tel" id="group-code" class="code-input" maxlength="4" placeholder="0000">
-            <p id="code-error" style="color:#FF5252; font-size:13px; font-weight:bold; display:none;">⚠️ コードがちがうみたい！</p>
+            <p id="code-error" style="color:#FF5252; font-weight:bold; display:none;">⚠️ コードがちがうよ！</p>
         </div>
-        <button class="btn-main" id="start-button" onclick="startGame()" disabled>診断をはじめる！ 💖</button>
+        <button id="start-btn" class="btn-main" onclick="startGame()" disabled>診断をはじめる！ 💖</button>
     </div>
 
     <div id="quiz-area">
-        <p style="color:#0097A7; font-weight:bold; font-size:14px;">しつもん <span id="q-number">1</span> / <span id="q-total">--</span></p>
-        <div class="progress-bar-container"><div id="progress-bar" class="progress-bar"></div></div>
         <div class="question-box" id="question-text"></div>
-        <div id="options-container" style="display: flex; flex-direction: column; gap: 12px;"></div>
+        <div id="options-container"></div>
     </div>
 
     <div id="result-area">
-        <div id="result-content-container" style="padding: 10px; background: white;">
-            <h2 style="font-size:18px; color:#FF69B4;">🎀 診断結果 🎀</h2>
+        <div id="result-content-container" style="background: white; padding: 10px;">
+            <h2 style="color: var(--primary-pink); margin-top:0;">🎀 診断結果 🎀</h2>
             <div id="result-header"></div>
-            <div style="margin: 15px auto; width: 100%; height: 300px;">
+            <div style="height: 300px; position: relative;">
                 <canvas id="radarChart"></canvas>
             </div>
             <div id="result-body" class="result-desc-box"></div>
         </div>
-        <button onclick="downloadResultImage()" class="btn-main" style="background:linear-gradient(#00BCD4, #0097A7); color:white; box-shadow:0 6px 0 #006064; margin-top:20px;">結果を写真に保存する 📸</button>
-        <button onclick="location.reload()" style="background:none; border:none; color:#888; margin-top:15px; cursor:pointer;">もう一度診断する</button>
+        <button onclick="downloadResultImage()" class="btn-main" style="margin-top:20px;">結果を写真に保存する 📸</button>
+        <button onclick="location.reload()" style="background:none; border:none; color:#888; margin-top:20px; cursor:pointer;">もう一度やる</button>
     </div>
 </div>
 
 <script>
-    const GOOGLE_APP_URL = "https://script.google.com/macros/s/AKfycbyQN2nMdSiiWG9xy29qc9EgwOkmnS4JCmuNAvTcLD5QPjz4wQeSztrh8pKRV4qQ9pAF/exec"; 
-    const QUESTIONS_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vS9pj-nSE8qg0GTy-VDTdvpDrIJuE6OiJbnE0cOyPtHoV5W98am4V3vKES6H9rlTBfaRxWcUsLuI1VE/pub?gid=0&single=true&output=csv"; 
-    const RESULTS_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vS9pj-nSE8qg0GTy-VDTdvpDrIJuE6OiJbnE0cOyPtHoV5W98am4V3vKES6H9rlTBfaRxWcUsLuI1VE/pub?gid=1023134718&single=true&output=csv";
-    const CODES_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTu7LeLdHPVzh45ghYextA9pyFarqes1_VESG8wkFNVFSNekdQi85RBq3f-swWHQy8Wjr9IpQnrdncS/pub?output=csv";
+    // --- 音源の設定 ---
+    const soundTap = new Audio('https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3'); // ピコッ
+    const soundSuccess = new Audio('https://assets.mixkit.co/active_storage/sfx/1435/1435-preview.mp3'); // キラキラ
+    const soundError = new Audio('https://assets.mixkit.co/active_storage/sfx/951/951-preview.mp3'); // ブブー
 
-    let questions = [], results = {}, validCodes = [], currentQuestionIndex = 0;
-    let scores = { A: 0, B: 0, C: 0, D: 0, E: 0, F: 0, G: 0, H: 0, N: 0 };
+    const QUESTIONS_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vS9pj-nSE8qg0GTy-VDTdvpDrIJuE6OiJbnE0cOyPtHoV5W98am4V3vKES6H9rlTBfaRxWcUsLuI1VE/pub?gid=0&single=true&output=csv"; 
+    const RESULTS_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vS9pj-nSE8qg0GTy-VDTdvpDrIJuE6OiJbnE0cOyPtHoV5W98am4V3vKES6H9rlTBfaRxWcUsLuI1VE/pub?gid=1023134718&single=true&output=csv";
+    const CODES_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTu7LeLdHPVzh45ghYextA9pyFarqes1_VESG8wkFNVFSNekdQi85RBq3f-swWHQy8Wjr9IpQnrdncS/pub?output=csv";
 
-    function parseCSV(text) {
-        const rows = []; let row = []; let field = ""; let inQuotes = false;
-        for (let i = 0; i < text.length; i++) {
-            const char = text[i];
-            if (inQuotes) {
-                if (char === '"' && text[i+1] === '"') { field += '"'; i++; }
-                else if (char === '"') inQuotes = false;
-                else field += char;
-            } else {
-                if (char === '"') inQuotes = true;
-                else if (char === ',') { row.push(field); field = ""; }
-                else if (char === '\n' || char === '\r') {
-                    row.push(field); field = "";
-                    if (row.length > 0 && row.some(x => x !== "")) rows.push(row);
-                    row = []; if (char === '\r' && text[i+1] === '\n') i++;
-                } else field += char;
-            }
-        }
-        if (field || row.length > 0) { row.push(field); rows.push(row); }
-        return rows;
-    }
+    let questions = [], resultsMaster = {}, validCodes = [], currentIdx = 0;
+    let scores = { A:0, B:0, C:0, D:0, E:0, F:0, G:0, H:0, N:0 };
 
-    async function loadData() {
+    async function init() {
         try {
             const [qRes, rRes, cRes] = await Promise.all([
-                fetch(QUESTIONS_CSV_URL).then(r => r.text()),
-                fetch(RESULTS_CSV_URL).then(r => r.text()),
-                fetch(CODES_CSV_URL).then(r => r.text())
+                fetch(QUESTIONS_CSV).then(r => r.text()),
+                fetch(RESULTS_CSV).then(r => r.text()),
+                fetch(CODES_CSV).then(r => r.text())
             ]);
-            parseQuestions(qRes);
-            parseResults(rRes);
-            validCodes = cRes.split(/\r?\n/).map(l => l.trim()).filter(l => l !== "");
-            document.getElementById('loading-message').innerText = "じゅんびOK！✨";
-            document.getElementById('start-button').disabled = false;
-        } catch (e) { document.getElementById('loading-message').innerText = "通信エラー😢"; }
-    }
-
-    function parseQuestions(text) {
-        const rows = parseCSV(text).slice(1);
-        questions = rows.map(c => {
-            const opts = [];
-            for(let i=1; i<=3; i++) {
-                if(c[i]) {
-                    const m = c[i].match(/(.*)\((.)\)/);
-                    if(m) opts.push({ text: m[1].trim(), type: m[2].toUpperCase() });
+            
+            // 質問パース
+            questions = qRes.split('\n').slice(1).map(line => {
+                const c = line.split(',');
+                if(c.length < 2) return null;
+                const opts = [];
+                for(let i=1; i<=3; i++) {
+                    if(c[i]) {
+                        const m = c[i].match(/(.*)\((.)\)/);
+                        if(m) opts.push({ text: m[1].trim(), type: m[2].toUpperCase() });
+                    }
                 }
-            }
-            opts.push({ text: "どれもあてはまらない", type: "N" });
-            return { text: c[0], options: opts };
-        }).filter(q => q.text);
-        document.getElementById('q-total').innerText = questions.length;
-    }
+                opts.push({ text: "どれもあてはまらない", type: "N" });
+                return { text: c[0], options: opts };
+            }).filter(q => q);
 
-    function parseResults(text) {
-        parseCSV(text).slice(1).forEach(row => {
-            if(row[0]) results[row[0].trim().toUpperCase()] = { animal: row[1], title: row[2], catch: row[3], desc: row[4] };
-        });
+            // 結果パース
+            rRes.split('\n').slice(1).forEach(line => {
+                const c = line.split(',');
+                if(c[0]) resultsMaster[c[0].trim().toUpperCase()] = { animal:c[1], title:c[2], catch:c[3], desc:c[4] };
+            });
+
+            validCodes = cRes.split(/\r?\n/).map(l => l.trim());
+            document.getElementById('loading-msg').innerText = "じゅんび完了！✨";
+            document.getElementById('start-btn').disabled = false;
+        } catch (e) { document.getElementById('loading-msg').innerText = "エラー：再読み込みしてね"; }
     }
 
     function startGame() {
         const code = document.getElementById('group-code').value;
         if (validCodes.includes(code)) {
+            soundTap.play();
             document.getElementById('start-screen').style.display = 'none';
             document.getElementById('quiz-area').style.display = 'block';
             showQuestion();
-        } else { document.getElementById('code-error').style.display = 'block'; }
+        } else {
+            soundError.play();
+            document.getElementById('code-error').style.display = 'block';
+        }
     }
 
     function showQuestion() {
-        const q = questions[currentQuestionIndex];
+        const q = questions[currentIdx];
         document.getElementById('question-text').innerText = q.text;
-        document.getElementById('q-number').innerText = currentQuestionIndex + 1;
-        document.getElementById('progress-bar').style.width = (currentQuestionIndex / questions.length * 100) + "%";
         const container = document.getElementById('options-container');
         container.innerHTML = "";
         q.options.forEach(opt => {
             const btn = document.createElement('button');
             btn.innerText = opt.text;
             btn.className = 'option-btn';
-            btn.onclick = () => { scores[opt.type]++; currentQuestionIndex++; if (currentQuestionIndex < questions.length) showQuestion(); else showResult(); };
+            btn.onclick = () => {
+                soundTap.play();
+                scores[opt.type]++;
+                currentIdx++;
+                if (currentIdx < questions.length) showQuestion(); else showResult();
+            };
             container.appendChild(btn);
         });
     }
 
     function showResult() {
+        soundSuccess.play();
         confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
         document.getElementById('quiz-area').style.display = 'none';
         document.getElementById('result-area').style.display = 'block';
 
         let maxType = "A", maxScore = -1;
         for (let t in scores) { if(t !== 'N' && scores[t] > maxScore) { maxScore = scores[t]; maxType = t; } }
-        if (scores.N > maxScore) maxType = "N";
 
-        const res = results[maxType] || { animal: "🦄", title: "にじいろ", catch: "無限の可能性！", desc: "キミは自由だ！ 💰そのまま進もう！" };
-        document.getElementById('result-header').innerHTML = `<span style="font-size:70px;">${res.animal}</span><div style="font-size:24px; color:#FF1493; font-weight:bold;">${res.title}</div><p>${res.catch}</p>`;
-        
-        const parts = res.desc.split('💰');
-        document.getElementById('result-body').innerHTML = `<div class="desc-text">${parts[0]}</div>${parts[1] ? `<div class="advice-box">💰 ${parts[1]}</div>` : ""}`;
+        const res = resultsMaster[maxType] || { animal: "🦄", title: "にじいろ", catch: "無限の可能性！", desc: "キミは自由なタイプだ！" };
+        document.getElementById('result-header').innerHTML = `<span style="font-size:70px;">${res.animal}</span><div style="font-size:24px; color:#FF1493; font-weight:bold;">${res.title}</div><p style="font-weight:bold; color:var(--primary-pink);">${res.catch}</p>`;
+        document.getElementById('result-body').innerText = res.desc;
 
-        const currentData = [scores.A + scores.G + scores.C, scores.B + scores.F, scores.E + scores.H, scores.D * 2];
+        // --- グラフ比較ロジック ---
+        const currentData = [
+            scores.A + scores.G + scores.C, // 守る
+            scores.B + scores.F,           // 使う
+            scores.E + scores.H,           // 増やす
+            scores.D * 2                   // 分ける
+        ];
+
         const lastDataStr = localStorage.getItem('last_money_score');
-        let datasets = [{ label: '今回のキミ', data: currentData, backgroundColor: 'rgba(255, 105, 180, 0.4)', borderColor: '#FF69B4', borderWidth: 3 }];
-        if (lastDataStr) { datasets.push({ label: '前回のキミ', data: JSON.parse(lastDataStr), backgroundColor: 'rgba(160, 160, 160, 0.1)', borderColor: '#A0A0A0', borderWidth: 2, borderDash: [5, 5] }); }
+        const datasets = [{
+            label: '今回のキミ',
+            data: currentData,
+            backgroundColor: 'rgba(255, 105, 180, 0.4)',
+            borderColor: '#FF69B4',
+            borderWidth: 3,
+            zIndex: 10
+        }];
+
+        if (lastDataStr) {
+            datasets.push({
+                label: '前回のキミ',
+                data: JSON.parse(lastDataStr),
+                backgroundColor: 'rgba(160, 160, 160, 0.1)',
+                borderColor: '#A0A0A0',
+                borderWidth: 2,
+                borderDash: [5, 5]
+            });
+        }
         localStorage.setItem('last_money_score', JSON.stringify(currentData));
 
         new Chart(document.getElementById('radarChart'), {
             type: 'radar',
             data: { labels: ['守る', '使う', '増やす', '分ける'], datasets: datasets },
-            options: { scales: { r: { beginAtZero: true, suggestedMax: 5, ticks: { display: false } } }, plugins: { legend: { display: !!lastDataStr, position: 'bottom' } } }
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                scales: { r: { beginAtZero: true, suggestedMax: 5, ticks: { display: false } } },
+                plugins: { legend: { display: !!lastDataStr, position: 'bottom' } }
+            }
         });
-
-        const data = new URLSearchParams({ groupCode: document.getElementById('group-code').value, type: maxType, score: maxScore });
-        fetch(GOOGLE_APP_URL, { method: 'POST', mode: 'no-cors', body: data });
     }
 
     function downloadResultImage() {
+        soundTap.play();
         html2canvas(document.getElementById('result-content-container')).then(canvas => {
-            const link = document.createElement('a'); link.download = '診断結果.png'; link.href = canvas.toDataURL(); link.click();
+            const link = document.createElement('a');
+            link.download = '診断結果.png';
+            link.href = canvas.toDataURL();
+            link.click();
         });
     }
-    window.onload = loadData;
+
+    window.onload = init;
 </script>
 </body>
 </html>
