@@ -22,6 +22,9 @@
         .animal-emoji { font-size: 90px; margin: 10px 0; display: block; animation: bounce 2s infinite; }
         .result-catch { font-size: 22px; color: var(--deep-pink); font-weight: 900; margin: 5px 0; }
         .chart-container { position: relative; height: 320px; width: 100%; margin: 10px 0; }
+        .history-container { margin-top: 30px; padding-top: 20px; border-top: 2px dashed #FFD1DC; }
+        .history-title { font-size: 18px; color: var(--deep-pink); font-weight: 800; margin-bottom: 10px; }
+        .history-chart-container { height: 250px; width: 100%; }
         .result-desc-box { text-align: left; background: #fffcfd; padding: 25px; border-radius: 30px; border: 3px solid #FFD1DC; line-height: 1.8; white-space: pre-wrap; font-size: 15px; margin-top: 20px; }
         @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-15px); } }
         #quiz-area, #result-area { display: none; }
@@ -53,6 +56,13 @@
             <div id="result-header"></div>
             <div class="chart-container"><canvas id="radarChart"></canvas></div>
             <div id="result-body" class="result-desc-box"></div>
+            
+            <div class="history-container" id="history-section" style="display:none;">
+                <div class="history-title">📈 スコアの推移</div>
+                <div class="history-chart-container">
+                    <canvas id="lineChart"></canvas>
+                </div>
+            </div>
         </div>
         <button onclick="downloadResultImage()" class="btn-main" style="margin-top:25px; background: linear-gradient(#4CAF50, #45a049); color: white; box-shadow: 0 8px 0 #2e7d32; font-size:16px;">結果を写真で保存 📸</button>
         <button onclick="location.reload()" style="background:none; border:none; color:#aaa; margin-top:20px; cursor:pointer;">最初に戻る</button>
@@ -158,7 +168,6 @@
         document.getElementById('result-header').innerHTML = `<span class="animal-emoji">${res.emoji}</span><div class="result-catch">${res.catch}</div>`;
         document.getElementById('result-body').innerText = res.desc;
 
-        // 今回のスコアを計算
         const currentData = [
             scores.A + scores.G + scores.C, 
             scores.B + scores.F,           
@@ -166,35 +175,47 @@
             scores.D * 2                   
         ];
 
-        // グラフデータセットの準備
-        const datasets = [{
-            label: '今回のあなた',
-            data: currentData,
-            backgroundColor: 'rgba(255, 105, 180, 0.5)',
-            borderColor: '#FF69B4',
-            borderWidth: 4,
-            pointBackgroundColor: '#FF69B4',
-            z: 10
-        }];
+        // --- 履歴保存ロジック (複数回対応) ---
+        const historyKey = `history_data_${userCode}`;
+        let history = JSON.parse(localStorage.getItem(historyKey)) || [];
+        const today = new Date().toLocaleDateString();
+        history.push({ date: today, scores: currentData });
+        if (history.length > 10) history.shift(); // 最大10回保持
+        localStorage.setItem(historyKey, JSON.stringify(history));
 
-        // 【復活機能】LocalStorageから前回のデータを取得（ユーザーコード別）
-        const lastScoreKey = `last_score_${userCode}`;
-        const lastDataRaw = localStorage.getItem(lastScoreKey);
-        if (lastDataRaw) {
-            datasets.push({
-                label: '前回のあなた',
-                data: JSON.parse(lastDataRaw),
-                backgroundColor: 'transparent',
-                borderColor: '#B2EBF2',
-                borderWidth: 3,
-                borderDash: [5, 5],
-                pointBackgroundColor: '#B2EBF2',
-                z: 5
+        // 1. レーダーチャート
+        new Chart(document.getElementById('radarChart'), {
+            type: 'radar',
+            data: { 
+                labels: ['守る力', '使う力', '増やす力', '分ける力'], 
+                datasets: [{
+                    label: '今回のあなた',
+                    data: currentData,
+                    backgroundColor: 'rgba(255, 105, 180, 0.5)',
+                    borderColor: '#FF69B4',
+                    borderWidth: 4
+                }] 
+            },
+            options: { responsive: true, maintainAspectRatio: false, scales: { r: { beginAtZero: true, suggestedMax: 5 } } }
+        });
+
+        // 2. 推移グラフ（2回目以降に表示）
+        if (history.length > 1) {
+            document.getElementById('history-section').style.display = 'block';
+            new Chart(document.getElementById('lineChart'), {
+                type: 'line',
+                data: {
+                    labels: history.map(h => h.date),
+                    datasets: [
+                        { label: '守る', data: history.map(h => h.scores[0]), borderColor: '#FF69B4', tension: 0.3 },
+                        { label: '使う', data: history.map(h => h.scores[1]), borderColor: '#FFD700', tension: 0.3 },
+                        { label: '増やす', data: history.map(h => h.scores[2]), borderColor: '#4CAF50', tension: 0.3 },
+                        { label: '分ける', data: history.map(h => h.scores[3]), borderColor: '#2196F3', tension: 0.3 }
+                    ]
+                },
+                options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, max: 5 } } }
             });
         }
-
-        // 今回のスコアを保存
-        localStorage.setItem(lastScoreKey, JSON.stringify(currentData));
 
         // GAS送信
         const formData = new URLSearchParams();
@@ -202,28 +223,13 @@
         formData.append('type', maxType);
         formData.append('animal', res.catch);
         fetch(GAS_URL, { method: "POST", body: formData, mode: "no-cors" });
-
-        // グラフ描画
-        new Chart(document.getElementById('radarChart'), {
-            type: 'radar',
-            data: { 
-                labels: ['守る力', '使う力', '増やす力', '分ける力'], 
-                datasets: datasets 
-            },
-            options: { 
-                responsive: true, 
-                maintainAspectRatio: false, 
-                scales: { r: { beginAtZero: true, suggestedMax: 5, ticks: { stepSize: 1 } } },
-                plugins: { legend: { position: 'bottom' } }
-            }
-        });
     }
 
     function downloadResultImage() {
         html2canvas(document.getElementById('result-content-container'), { scale: 2, backgroundColor: "#ffffff" }).then(canvas => {
             const link = document.createElement('a');
             link.download = `診断結果_${userCode}.png`;
-            link.href = canvas.toURL(); link.click();
+            link.href = canvas.toDataURL(); link.click();
         });
     }
     window.onload = init;
